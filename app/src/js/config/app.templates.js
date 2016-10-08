@@ -1,0 +1,2 @@
+angular.module('templates', []).run(['$templateCache', function($templateCache) {$templateCache.put('home/home.html','<h1>Hallo</h1>\n<h2>{{home.helloWorld}}</h2>\n');
+$templateCache.put('layout/app-view.html','<div ui-view></div>\n');}]);
