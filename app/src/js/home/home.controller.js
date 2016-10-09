@@ -2,7 +2,7 @@ class HomeCtrl{
   constructor(){
     'ngInject';
 
-    this.helloWorld = "Hello from Florian";
+    this.helloWorld = "Hello from Flori23";
   }
 }
 
