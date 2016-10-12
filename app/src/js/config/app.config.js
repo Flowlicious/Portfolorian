@@ -1,19 +1,51 @@
-function AppConfig($httpProvider, $stateProvider, $locationProvider, $urlRouterProvider) {
-  'ngInject';
+function AppConfig($httpProvider, $stateProvider, $locationProvider, $urlRouterProvider, lockProvider, $provide, jwtOptionsProvider, jwtInterceptorProvider, AppConstants) {
+    'ngInject';
 
-  /*
-    If you don't want hashbang routing, uncomment this line.
-    Our tutorial will be using hashbang routing though :)
+    $stateProvider
+        .state('app', {
+            abstract: true,
+            templateUrl: 'layout/app-view.html'
+        });
 
-  // $locationProvider.html5Mode(true);
-  */
-  $stateProvider
-  .state('app', {
-    abstract: true,
-    templateUrl: 'layout/app-view.html'
-  });
+    $urlRouterProvider.otherwise('/');
 
-  $urlRouterProvider.otherwise('/');
+
+    jwtInterceptorProvider.tokenGetter = function(store) {
+      'ngInject';
+        return store.get(AppConstants.store_idToken);
+    }
+
+    jwtOptionsProvider.config({
+        whiteListedDomains: ['localhost']
+    })
+
+    lockProvider.init({
+      domain: 'rian0702.eu.auth0.com',
+          clientID: 'neCYBEyJpofhgpBClkCbxpCvWpnmNnAy',
+          options: {
+              auth: {
+                  redirect: false
+              },
+              autoclose: true
+          }
+    })
+
+
+
+    function redirect($q,$injector,AuthService,store,$location){
+      'ngInject';
+        return {
+          responseError:function(rejection){
+            if(rejection.status === 401){
+              AuthService.logout();
+            }
+            return $q.reject(rejection);
+          }
+        }
+      }
+      $provide.factory('redirect',redirect);
+      $httpProvider.interceptors.push('redirect');
+      $httpProvider.interceptors.push('jwtInterceptor');
 
 }
 

@@ -1,4 +1,672 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+(function() {
+
+
+// Create all modules and define dependencies to make sure they exist
+// and are loaded in the correct order to satisfy dependency injection
+// before all nested files are concatenated by Grunt
+
+// Modules
+angular.module('angular-jwt',
+    [
+        'angular-jwt.options',
+        'angular-jwt.interceptor',
+        'angular-jwt.jwt',
+        'angular-jwt.authManager'
+    ]);
+
+angular.module('angular-jwt.authManager', [])
+  .provider('authManager', function () {
+
+    this.$get = ["$rootScope", "$injector", "$location", "jwtHelper", "jwtInterceptor", "jwtOptions", function ($rootScope, $injector, $location, jwtHelper, jwtInterceptor, jwtOptions) {
+
+      var config = jwtOptions.getConfig();
+
+      $rootScope.isAuthenticated = false;
+
+      function authenticate() {
+        $rootScope.isAuthenticated = true;
+      }
+
+      function unauthenticate() {
+        $rootScope.isAuthenticated = false;
+      }
+
+      function checkAuthOnRefresh() {
+        $rootScope.$on('$locationChangeStart', function () {
+          var tokenGetter = config.tokenGetter;
+          var token = null;
+          if (Array.isArray(tokenGetter)) {
+            token = $injector.invoke(tokenGetter, this, {options: null});
+          } else {
+            token = config.tokenGetter();
+          }
+          if (token) {
+            if (!jwtHelper.isTokenExpired(token)) {
+              authenticate();
+            }
+          }
+        });
+      }
+
+      function redirectWhenUnauthenticated() {
+        $rootScope.$on('unauthenticated', function () {
+          var redirector = config.unauthenticatedRedirector;
+          if (Array.isArray(redirector)) {
+            $injector.invoke(redirector, this, {});
+          } else {
+            config.unauthenticatedRedirector($location);
+          }
+          unauthenticate();
+        });
+      }
+
+      return {
+        authenticate: authenticate,
+        unauthenticate: unauthenticate,
+        checkAuthOnRefresh: checkAuthOnRefresh,
+        redirectWhenUnauthenticated: redirectWhenUnauthenticated
+      }
+    }]
+  });
+
+angular.module('angular-jwt.interceptor', [])
+  .provider('jwtInterceptor', function() {
+
+    this.urlParam;
+    this.authHeader;
+    this.authPrefix;
+    this.whiteListedDomains;
+    this.tokenGetter;
+
+    var config = this;
+
+    this.$get = ["$q", "$injector", "$rootScope", "urlUtils", "jwtOptions", function($q, $injector, $rootScope, urlUtils, jwtOptions) {
+
+      var options = angular.extend({}, jwtOptions.getConfig(), config);
+
+      function isSafe (url) {
+        if (!urlUtils.isSameOrigin(url) && !options.whiteListedDomains.length) {
+          throw new Error('As of v0.1.0, requests to domains other than the application\'s origin must be white listed. Use jwtOptionsProvider.config({ whiteListedDomains: [<domain>] }); to whitelist.')
+        }
+        var hostname = urlUtils.urlResolve(url).hostname.toLowerCase();
+        for (var i = 0; i < options.whiteListedDomains.length; i++) {
+          var domain = options.whiteListedDomains[i].toLowerCase();
+          if (domain === hostname) {
+            return true;
+          }
+        }
+
+        if (urlUtils.isSameOrigin(url)) {
+          return true;
+        }
+
+        return false;
+      }
+
+      return {
+        request: function (request) {
+          if (request.skipAuthorization || !isSafe(request.url)) {
+            return request;
+          }
+
+          if (options.urlParam) {
+            request.params = request.params || {};
+            // Already has the token in the url itself
+            if (request.params[options.urlParam]) {
+              return request;
+            }
+          } else {
+            request.headers = request.headers || {};
+            // Already has an Authorization header
+            if (request.headers[options.authHeader]) {
+              return request;
+            }
+          }
+
+          var tokenPromise = $q.when($injector.invoke(options.tokenGetter, this, {
+            options: request
+          }));
+
+          return tokenPromise.then(function(token) {
+            if (token) {
+              if (options.urlParam) {
+                request.params[options.urlParam] = token;
+              } else {
+                request.headers[options.authHeader] = options.authPrefix + token;
+              }
+            }
+            return request;
+          });
+        },
+        responseError: function (response) {
+          // handle the case where the user is not authenticated
+          if (response.status === 401) {
+            $rootScope.$broadcast('unauthenticated', response);
+          }
+          return $q.reject(response);
+        }
+      };
+    }]
+  });
+ angular.module('angular-jwt.jwt', [])
+  .service('jwtHelper', ["$window", function($window) {
+
+    this.urlBase64Decode = function(str) {
+      var output = str.replace(/-/g, '+').replace(/_/g, '/');
+      switch (output.length % 4) {
+        case 0: { break; }
+        case 2: { output += '=='; break; }
+        case 3: { output += '='; break; }
+        default: {
+          throw 'Illegal base64url string!';
+        }
+      }
+      return $window.decodeURIComponent(escape($window.atob(output))); //polyfill https://github.com/davidchambers/Base64.js
+    };
+
+
+    this.decodeToken = function(token) {
+      var parts = token.split('.');
+
+      if (parts.length !== 3) {
+        throw new Error('JWT must have 3 parts');
+      }
+
+      var decoded = this.urlBase64Decode(parts[1]);
+      if (!decoded) {
+        throw new Error('Cannot decode the token');
+      }
+
+      return angular.fromJson(decoded);
+    };
+
+    this.getTokenExpirationDate = function(token) {
+      var decoded = this.decodeToken(token);
+
+      if(typeof decoded.exp === "undefined") {
+        return null;
+      }
+
+      var d = new Date(0); // The 0 here is the key, which sets the date to the epoch
+      d.setUTCSeconds(decoded.exp);
+
+      return d;
+    };
+
+    this.isTokenExpired = function(token, offsetSeconds) {
+      var d = this.getTokenExpirationDate(token);
+      offsetSeconds = offsetSeconds || 0;
+      if (d === null) {
+        return false;
+      }
+
+      // Token expired?
+      return !(d.valueOf() > (new Date().valueOf() + (offsetSeconds * 1000)));
+    };
+  }]);
+
+angular.module('angular-jwt.options', [])
+  .provider('jwtOptions', function() {
+    var globalConfig = {};
+    this.config = function(value) {
+      globalConfig = value;
+    };
+    this.$get = function() {
+
+      var options = {
+        urlParam: null,
+        authHeader: 'Authorization',
+        authPrefix: 'Bearer ',
+        whiteListedDomains: [],
+        tokenGetter: function() {
+          return null;
+        },
+        loginPath: '/',
+        unauthenticatedRedirectPath: '/',
+        unauthenticatedRedirector: function(location) {
+          location.path(this.unauthenticatedRedirectPath);
+        }
+      };
+
+      function JwtOptions() {
+        var config = this.config = angular.extend({}, options, globalConfig);
+      }
+
+      JwtOptions.prototype.getConfig = function() {
+        return this.config;
+      };
+
+      return new JwtOptions();
+    }
+  });
+
+ /**
+  * The content from this file was directly lifted from Angular. It is
+  * unfortunately not a public API, so the best we can do is copy it.
+  *
+  * Angular References:
+  *   https://github.com/angular/angular.js/issues/3299
+  *   https://github.com/angular/angular.js/blob/d077966ff1ac18262f4615ff1a533db24d4432a7/src/ng/urlUtils.js
+  */
+
+ angular.module('angular-jwt.interceptor')
+  .service('urlUtils', function () {
+
+    // NOTE:  The usage of window and document instead of $window and $document here is
+    // deliberate.  This service depends on the specific behavior of anchor nodes created by the
+    // browser (resolving and parsing URLs) that is unlikely to be provided by mock objects and
+    // cause us to break tests.  In addition, when the browser resolves a URL for XHR, it
+    // doesn't know about mocked locations and resolves URLs to the real document - which is
+    // exactly the behavior needed here.  There is little value is mocking these out for this
+    // service.
+    var urlParsingNode = document.createElement("a");
+    var originUrl = urlResolve(window.location.href);
+
+    /**
+     *
+     * Implementation Notes for non-IE browsers
+     * ----------------------------------------
+     * Assigning a URL to the href property of an anchor DOM node, even one attached to the DOM,
+     * results both in the normalizing and parsing of the URL.  Normalizing means that a relative
+     * URL will be resolved into an absolute URL in the context of the application document.
+     * Parsing means that the anchor node's host, hostname, protocol, port, pathname and related
+     * properties are all populated to reflect the normalized URL.  This approach has wide
+     * compatibility - Safari 1+, Mozilla 1+, Opera 7+,e etc.  See
+     * http://www.aptana.com/reference/html/api/HTMLAnchorElement.html
+     *
+     * Implementation Notes for IE
+     * ---------------------------
+     * IE <= 10 normalizes the URL when assigned to the anchor node similar to the other
+     * browsers.  However, the parsed components will not be set if the URL assigned did not specify
+     * them.  (e.g. if you assign a.href = "foo", then a.protocol, a.host, etc. will be empty.)  We
+     * work around that by performing the parsing in a 2nd step by taking a previously normalized
+     * URL (e.g. by assigning to a.href) and assigning it a.href again.  This correctly populates the
+     * properties such as protocol, hostname, port, etc.
+     *
+     * References:
+     *   http://developer.mozilla.org/en-US/docs/Web/API/HTMLAnchorElement
+     *   http://www.aptana.com/reference/html/api/HTMLAnchorElement.html
+     *   http://url.spec.whatwg.org/#urlutils
+     *   https://github.com/angular/angular.js/pull/2902
+     *   http://james.padolsey.com/javascript/parsing-urls-with-the-dom/
+     *
+     * @kind function
+     * @param {string} url The URL to be parsed.
+     * @description Normalizes and parses a URL.
+     * @returns {object} Returns the normalized URL as a dictionary.
+     *
+     *   | member name   | Description    |
+     *   |---------------|----------------|
+     *   | href          | A normalized version of the provided URL if it was not an absolute URL |
+     *   | protocol      | The protocol including the trailing colon                              |
+     *   | host          | The host and port (if the port is non-default) of the normalizedUrl    |
+     *   | search        | The search params, minus the question mark                             |
+     *   | hash          | The hash string, minus the hash symbol
+     *   | hostname      | The hostname
+     *   | port          | The port, without ":"
+     *   | pathname      | The pathname, beginning with "/"
+     *
+     */
+    function urlResolve(url) {
+      var href = url;
+
+      // Normalize before parse.  Refer Implementation Notes on why this is
+      // done in two steps on IE.
+      urlParsingNode.setAttribute("href", href);
+      href = urlParsingNode.href;
+      urlParsingNode.setAttribute('href', href);
+
+      // urlParsingNode provides the UrlUtils interface - http://url.spec.whatwg.org/#urlutils
+      return {
+        href: urlParsingNode.href,
+        protocol: urlParsingNode.protocol ? urlParsingNode.protocol.replace(/:$/, '') : '',
+        host: urlParsingNode.host,
+        search: urlParsingNode.search ? urlParsingNode.search.replace(/^\?/, '') : '',
+        hash: urlParsingNode.hash ? urlParsingNode.hash.replace(/^#/, '') : '',
+        hostname: urlParsingNode.hostname,
+        port: urlParsingNode.port,
+        pathname: (urlParsingNode.pathname.charAt(0) === '/')
+          ? urlParsingNode.pathname
+          : '/' + urlParsingNode.pathname
+      };
+    }
+
+    /**
+     * Parse a request URL and determine whether this is a same-origin request as the application document.
+     *
+     * @param {string|object} requestUrl The url of the request as a string that will be resolved
+     * or a parsed URL object.
+     * @returns {boolean} Whether the request is for the same origin as the application document.
+     */
+    function urlIsSameOrigin(requestUrl) {
+      var parsed = (angular.isString(requestUrl)) ? urlResolve(requestUrl) : requestUrl;
+      return (parsed.protocol === originUrl.protocol &&
+              parsed.host === originUrl.host);
+    }
+
+    return {
+      urlResolve: urlResolve,
+      isSameOrigin: urlIsSameOrigin
+    };
+
+  });
+
+}());
+},{}],2:[function(require,module,exports){
+require('./dist/angular-jwt.js');
+module.exports = 'angular-jwt';
+
+
+},{"./dist/angular-jwt.js":1}],3:[function(require,module,exports){
+;(function() {
+
+  'use strict';
+
+  angular
+    .module('auth0.lock', [])
+    .provider('lock', lock);
+  
+  function lock() {
+    if (typeof Auth0Lock !== 'function') {
+      throw new Error('Auth0Lock must be loaded.');
+    }
+
+    this.init = function(config) {
+      if (!config) {
+        throw new Error('clientID and domain must be provided to lock');
+      }
+      this.clientID = config.clientID;
+      this.domain = config.domain;
+      this.options = config.options || {};
+    };
+
+    this.$get = ["$rootScope", function($rootScope) {
+
+      var Lock = new Auth0Lock(this.clientID, this.domain, this.options);
+      var credentials = {clientID: this.clientID, domain: this.domain};
+      var lock = {};
+      var functions = [];
+      for (var i in Lock) {
+        if(typeof Lock[i] === 'function') {
+          functions.push(i);
+        }
+      }
+
+      function safeApply(fn) {
+        var phase = $rootScope.$root.$$phase;
+        if(phase === '$apply' || phase === '$digest') {
+          if(fn && (typeof(fn) === 'function')) {
+            fn();
+          }
+        } else {
+          $rootScope.$apply(fn);
+        }
+      }
+
+      function wrapArguments(parameters) {
+        var lastIndex = parameters.length - 1,
+          func = parameters[lastIndex];
+        if(typeof func === 'function') {
+          parameters[lastIndex] = function() {
+            var args = arguments;
+            safeApply(function() {
+              func.apply(Lock, args)
+            })
+          }
+        }
+        return parameters;
+      }
+
+      for (var i = 0; i < functions.length; i++) {
+        lock[functions[i]]  = (function(name){
+          var customFunction = function() {
+            return Lock[name].apply(Lock, wrapArguments(arguments) );
+          };
+          return customFunction;
+        })(functions[i]);
+      }
+  
+      lock.interceptHash = function() {
+        $rootScope.$on('$locationChangeStart', function(event, location) {
+          if (/id_token=/.test(location)) {
+
+            var auth0 = new Auth0(credentials);
+            var authResult = auth0.parseHash();
+
+            if (authResult && authResult.idToken) {
+              Lock.emit('authenticated', authResult);
+            }
+
+          }
+        });
+      };
+
+      return lock;
+    }]
+  }
+})();
+
+},{}],4:[function(require,module,exports){
+(function() {
+
+
+// Create all modules and define dependencies to make sure they exist
+// and are loaded in the correct order to satisfy dependency injection
+// before all nested files are concatenated by Grunt
+
+angular.module('angular-storage',
+    [
+      'angular-storage.store'
+    ]);
+
+angular.module('angular-storage.cookieStorage', [])
+  .service('cookieStorage', ["$cookies", function ($cookies) {
+
+    this.set = function (what, value) {
+      return $cookies.put(what, value);
+    };
+
+    this.get = function (what) {
+      return $cookies.get(what);
+    };
+
+    this.remove = function (what) {
+      return $cookies.remove(what);
+    };
+  }]);
+
+angular.module('angular-storage.internalStore', ['angular-storage.localStorage', 'angular-storage.sessionStorage'])
+  .factory('InternalStore', ["$log", "$injector", function($log, $injector) {
+
+    function InternalStore(namespace, storage, delimiter, useCache) {
+      this.namespace = namespace || null;
+      if (angular.isUndefined(useCache) || useCache == null) {
+        useCache = true;
+      }
+      this.useCache = useCache;
+      this.delimiter = delimiter || '.';
+      this.inMemoryCache = {};
+      this.storage = $injector.get(storage || 'localStorage');
+    }
+
+    InternalStore.prototype.getNamespacedKey = function(key) {
+      if (!this.namespace) {
+        return key;
+      } else {
+        return [this.namespace, key].join(this.delimiter);
+      }
+    };
+
+    InternalStore.prototype.set = function(name, elem) {
+      if (this.useCache) {
+        this.inMemoryCache[name] = elem;
+      }
+      this.storage.set(this.getNamespacedKey(name), JSON.stringify(elem));
+    };
+
+    InternalStore.prototype.get = function(name) {
+      var obj = null;
+      if (this.useCache && name in this.inMemoryCache) {
+        return this.inMemoryCache[name];
+      }
+      var saved = this.storage.get(this.getNamespacedKey(name));
+      try {
+
+        if (typeof saved === 'undefined' || saved === 'undefined') {
+          obj = undefined;
+        } else {
+          obj = JSON.parse(saved);
+        }
+
+        if (this.useCache) {
+          this.inMemoryCache[name] = obj;
+        }
+      } catch(e) {
+        $log.error('Error parsing saved value', e);
+        this.remove(name);
+      }
+      return obj;
+    };
+
+    InternalStore.prototype.remove = function(name) {
+      if (this.useCache) {
+        this.inMemoryCache[name] = null;
+      }
+      this.storage.remove(this.getNamespacedKey(name));
+    };
+
+    return InternalStore;
+  }]);
+
+
+angular.module('angular-storage.localStorage', ['angular-storage.cookieStorage'])
+  .service('localStorage', ["$window", "$injector", function ($window, $injector) {
+    var localStorageAvailable;
+
+    try {
+      $window.localStorage.setItem('testKey', 'test');
+      $window.localStorage.removeItem('testKey');
+      localStorageAvailable = true;
+    } catch(e) {
+      localStorageAvailable = false;
+    }
+
+    if (localStorageAvailable) {
+      this.set = function (what, value) {
+        return $window.localStorage.setItem(what, value);
+      };
+
+      this.get = function (what) {
+        return $window.localStorage.getItem(what);
+      };
+
+      this.remove = function (what) {
+        return $window.localStorage.removeItem(what);
+      };
+      
+      this.clear = function () {
+        $window.localStorage.clear();
+      };
+    } else {
+      var cookieStorage = $injector.get('cookieStorage');
+
+      this.set = cookieStorage.set;
+      this.get = cookieStorage.get;
+      this.remove = cookieStorage.remove;
+    }
+  }]);
+
+angular.module('angular-storage.sessionStorage', ['angular-storage.cookieStorage'])
+  .service('sessionStorage', ["$window", "$injector", function ($window, $injector) {
+    var sessionStorageAvailable;
+
+    try {
+      $window.sessionStorage.setItem('testKey', 'test');
+      $window.sessionStorage.removeItem('testKey');
+      sessionStorageAvailable = true;
+    } catch(e) {
+      sessionStorageAvailable = false;
+    }
+
+    if (sessionStorageAvailable) {
+      this.set = function (what, value) {
+        return $window.sessionStorage.setItem(what, value);
+      };
+
+      this.get = function (what) {
+        return $window.sessionStorage.getItem(what);
+      };
+
+      this.remove = function (what) {
+        return $window.sessionStorage.removeItem(what);
+      };
+    } else {
+      var cookieStorage = $injector.get('cookieStorage');
+
+      this.set = cookieStorage.set;
+      this.get = cookieStorage.get;
+      this.remove = cookieStorage.remove;
+    }
+  }]);
+
+angular.module('angular-storage.store', ['angular-storage.internalStore'])
+  .provider('store', function() {
+
+    // the default storage
+    var _storage = 'localStorage';
+
+    //caching is on by default
+    var _caching = true;
+
+    /**
+     * Sets the storage.
+     *
+     * @param {String} storage The storage name
+     */
+    this.setStore = function(storage) {
+      if (storage && angular.isString(storage)) {
+        _storage = storage;
+      }
+    };
+
+    /**
+     * Sets the internal cache usage
+     *
+     * @param {boolean} useCache Whether to use internal cache
+     */
+    this.setCaching = function(useCache) {
+      _caching = !!useCache;
+    };
+
+    this.$get = ["InternalStore", function(InternalStore) {
+      var store = new InternalStore(null, _storage, null, _caching);
+
+      /**
+       * Returns a namespaced store
+       *
+       * @param {String} namespace The namespace
+       * @param {String} storage The name of the storage service
+       * @param {String} delimiter The key delimiter
+       * @param {boolean} useCache whether to use the internal caching
+       * @returns {InternalStore}
+       */
+      store.getNamespacedStore = function(namespace, storage, delimiter, useCache) {
+        return new InternalStore(namespace, storage, delimiter, useCache);
+      };
+
+      return store;
+    }];
+  });
+
+
+}());
+},{}],5:[function(require,module,exports){
+require('./dist/angular-storage.js');
+module.exports = 'angular-storage';
+
+
+},{"./dist/angular-storage.js":4}],6:[function(require,module,exports){
 /**
  * State-based routing for AngularJS
  * @version v0.3.1
@@ -4575,7 +5243,7 @@ angular.module('ui.router.state')
   .filter('isState', $IsStateFilter)
   .filter('includedByState', $IncludedByStateFilter);
 })(window, window.angular);
-},{}],2:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 /**
  * @license AngularJS v1.5.8
  * (c) 2010-2016 Google, Inc. http://angularjs.org
@@ -36344,11 +37012,11 @@ $provide.value("$locale", {
 })(window);
 
 !window.angular.$$csp().noInlineStyle && window.angular.element(document.head).prepend('<style type="text/css">@charset "UTF-8";[ng\\:cloak],[ng-cloak],[data-ng-cloak],[x-ng-cloak],.ng-cloak,.x-ng-cloak,.ng-hide:not(.ng-hide-animate){display:none !important;}ng\\:form{display:block;}.ng-animate-shim{visibility:hidden;}.ng-anchor{position:absolute;}</style>');
-},{}],3:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 require('./angular');
 module.exports = angular;
 
-},{"./angular":2}],4:[function(require,module,exports){
+},{"./angular":7}],9:[function(require,module,exports){
 /*!
  * Bootstrap v3.3.7 (http://getbootstrap.com)
  * Copyright 2011-2016 Twitter, Inc.
@@ -38727,7 +39395,7 @@ if (typeof jQuery === 'undefined') {
 
 }(jQuery);
 
-},{}],5:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 /*!
  * jQuery JavaScript Library v3.1.1
  * https://jquery.com/
@@ -48949,7 +49617,7 @@ if ( !noGlobal ) {
 return jQuery;
 } );
 
-},{}],6:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 'use strict';
 
 var _angular = require('angular');
@@ -48960,66 +49628,162 @@ var _app = require('./config/app.config');
 
 var _app2 = _interopRequireDefault(_app);
 
+var _app3 = require('./config/app.run');
+
+var _app4 = _interopRequireDefault(_app3);
+
+var _app5 = require('./config/app.constants');
+
+var _app6 = _interopRequireDefault(_app5);
+
 require('jquery');
 
 require('angular-ui-router');
+
+require('angular-jwt');
+
+require('angular-storage');
+
+require('angular-lock/dist/angular-lock');
 
 require('./layout');
 
 require('./home');
 
+require('./services');
+
 require('./config/app.templates');
+
+require('./mysite');
 
 require('bootstrap/dist/js/bootstrap.js');
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-var requires = ['ui.router', 'templates', 'app.layout', 'app.home'];
+var requires = ['auth0.lock', 'angular-storage', 'angular-jwt', 'ui.router', 'templates', 'app.layout', 'app.home', 'app.services', 'app.mysite'];
+//import './admin.mysite';
 
 window.app = _angular2.default.module('app', requires);
 
+_angular2.default.module('app').constant('AppConstants', _app6.default);
+_angular2.default.module('app').run(_app4.default);
 _angular2.default.module('app').config(_app2.default);
 
 _angular2.default.bootstrap(document, ['app'], {
     strictDi: true
 });
 
-},{"./config/app.config":7,"./config/app.templates":8,"./home":11,"./layout":13,"angular":3,"angular-ui-router":1,"bootstrap/dist/js/bootstrap.js":4,"jquery":5}],7:[function(require,module,exports){
+},{"./config/app.config":12,"./config/app.constants":13,"./config/app.run":14,"./config/app.templates":15,"./home":18,"./layout":20,"./mysite":21,"./services":25,"angular":8,"angular-jwt":2,"angular-lock/dist/angular-lock":3,"angular-storage":5,"angular-ui-router":6,"bootstrap/dist/js/bootstrap.js":9,"jquery":10}],12:[function(require,module,exports){
 'use strict';
 
-AppConfig.$inject = ["$httpProvider", "$stateProvider", "$locationProvider", "$urlRouterProvider"];
+AppConfig.$inject = ["$httpProvider", "$stateProvider", "$locationProvider", "$urlRouterProvider", "lockProvider", "$provide", "jwtOptionsProvider", "jwtInterceptorProvider", "AppConstants"];
 Object.defineProperty(exports, "__esModule", {
-  value: true
+    value: true
 });
-function AppConfig($httpProvider, $stateProvider, $locationProvider, $urlRouterProvider) {
-  'ngInject';
+function AppConfig($httpProvider, $stateProvider, $locationProvider, $urlRouterProvider, lockProvider, $provide, jwtOptionsProvider, jwtInterceptorProvider, AppConstants) {
+    'ngInject';
 
-  /*
-    If you don't want hashbang routing, uncomment this line.
-    Our tutorial will be using hashbang routing though :)
-   // $locationProvider.html5Mode(true);
-  */
+    redirect.$inject = ["$q", "$injector", "AuthService", "store", "$location"];
+    $stateProvider.state('app', {
+        abstract: true,
+        templateUrl: 'layout/app-view.html'
+    });
 
-  $stateProvider.state('app', {
-    abstract: true,
-    templateUrl: 'layout/app-view.html'
-  });
+    $urlRouterProvider.otherwise('/');
 
-  $urlRouterProvider.otherwise('/');
+    jwtInterceptorProvider.tokenGetter = ["store", function (store) {
+        'ngInject';
+
+        return store.get(AppConstants.store_idToken);
+    }];
+
+    jwtOptionsProvider.config({
+        whiteListedDomains: ['localhost']
+    });
+
+    lockProvider.init({
+        domain: 'rian0702.eu.auth0.com',
+        clientID: 'neCYBEyJpofhgpBClkCbxpCvWpnmNnAy',
+        options: {
+            auth: {
+                redirect: false
+            },
+            autoclose: true
+        }
+    });
+
+    function redirect($q, $injector, AuthService, store, $location) {
+        'ngInject';
+
+        return {
+            responseError: function responseError(rejection) {
+                if (rejection.status === 401) {
+                    AuthService.logout();
+                }
+                return $q.reject(rejection);
+            }
+        };
+    }
+    $provide.factory('redirect', redirect);
+    $httpProvider.interceptors.push('redirect');
+    $httpProvider.interceptors.push('jwtInterceptor');
 }
 
 exports.default = AppConfig;
 
-},{}],8:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+var AppConstants = {
+    store_idToken: 'id_token',
+    store_profile: 'profile'
+};
+
+exports.default = AppConstants;
+
+},{}],14:[function(require,module,exports){
+'use strict';
+
+AppRun.$inject = ["$rootScope", "AuthService", "authManager", "store", "jwtHelper", "$location"];
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+function AppRun($rootScope, AuthService, authManager, store, jwtHelper, $location) {
+    'ngInject';
+
+    $rootScope.AuthService = AuthService;
+    AuthService.registerAuthenticationListener();
+
+    $rootScope.$on('$locationChangeStart', function () {
+        var token = store.get('id_token');
+        if (token) {
+            if (!jwtHelper.isTokenExpired(token)) {
+                if (!authManager.isAuthenticated) {
+                    authManager.authenticate(store.get('profile'), token);
+                }
+            }
+        } else {
+            $location.path('/');
+        }
+    });
+}
+
+exports.default = AppRun;
+
+},{}],15:[function(require,module,exports){
 'use strict';
 
 angular.module('templates', []).run(['$templateCache', function ($templateCache) {
-  $templateCache.put('home/home.html', '<section class="bg-primary" id="about">\n    <div class="container">\n        <div class="row">\n            <div class="col-lg-8 col-lg-offset-2 text-center">\n                <h2 class="section-heading">We\'ve got what you need!</h2>\n                <hr class="light">\n                <p class="text-faded">Start Bootstrap has everything you need to get your new website up and running in no time! All of the templates and themes on Start Bootstrap are open source, free to download, and easy to use. No strings attached!</p>\n                <a href="#services" class="page-scroll btn btn-default btn-xl sr-button">Get Started!</a>\n            </div>\n        </div>\n    </div>\n</section>\n\n<section id="services">\n    <div class="container">\n        <div class="row">\n            <div class="col-lg-12 text-center">\n                <h2 class="section-heading">At Your Service</h2>\n                <hr class="primary">\n            </div>\n        </div>\n    </div>\n    <div class="container">\n        <div class="row">\n            <div class="col-lg-3 col-md-6 text-center">\n                <div class="service-box">\n                    <i class="fa fa-4x fa-diamond text-primary sr-icons"></i>\n                    <h3>Sturdy Templates</h3>\n                    <p class="text-muted">Our templates are updated regularly so they don\'t break.</p>\n                </div>\n            </div>\n            <div class="col-lg-3 col-md-6 text-center">\n                <div class="service-box">\n                    <i class="fa fa-4x fa-paper-plane text-primary sr-icons"></i>\n                    <h3>Ready to Ship</h3>\n                    <p class="text-muted">You can use this theme as is, or you can make changes!</p>\n                </div>\n            </div>\n            <div class="col-lg-3 col-md-6 text-center">\n                <div class="service-box">\n                    <i class="fa fa-4x fa-newspaper-o text-primary sr-icons"></i>\n                    <h3>Up to Date</h3>\n                    <p class="text-muted">We update dependencies to keep things fresh.</p>\n                </div>\n            </div>\n            <div class="col-lg-3 col-md-6 text-center">\n                <div class="service-box">\n                    <i class="fa fa-4x fa-heart text-primary sr-icons"></i>\n                    <h3>Made with Love</h3>\n                    <p class="text-muted">You have to make your websites with love these days!</p>\n                </div>\n            </div>\n        </div>\n    </div>\n</section>\n\n<section class="no-padding" id="portfolio">\n    <div class="container-fluid">\n        <div class="row no-gutter popup-gallery">\n            <div class="col-lg-4 col-sm-6">\n                <a href="img/portfolio/fullsize/1.jpg" class="portfolio-box">\n                    <img src="img/portfolio/thumbnails/1.jpg" class="img-responsive" alt="">\n                    <div class="portfolio-box-caption">\n                        <div class="portfolio-box-caption-content">\n                            <div class="project-category text-faded">\n                                Category\n                            </div>\n                            <div class="project-name">\n                                Project Name\n                            </div>\n                        </div>\n                    </div>\n                </a>\n            </div>\n            <div class="col-lg-4 col-sm-6">\n                <a href="img/portfolio/fullsize/2.jpg" class="portfolio-box">\n                    <img src="img/portfolio/thumbnails/2.jpg" class="img-responsive" alt="">\n                    <div class="portfolio-box-caption">\n                        <div class="portfolio-box-caption-content">\n                            <div class="project-category text-faded">\n                                Category\n                            </div>\n                            <div class="project-name">\n                                Project Name\n                            </div>\n                        </div>\n                    </div>\n                </a>\n            </div>\n            <div class="col-lg-4 col-sm-6">\n                <a href="img/portfolio/fullsize/3.jpg" class="portfolio-box">\n                    <img src="img/portfolio/thumbnails/3.jpg" class="img-responsive" alt="">\n                    <div class="portfolio-box-caption">\n                        <div class="portfolio-box-caption-content">\n                            <div class="project-category text-faded">\n                                Category\n                            </div>\n                            <div class="project-name">\n                                Project Name\n                            </div>\n                        </div>\n                    </div>\n                </a>\n            </div>\n            <div class="col-lg-4 col-sm-6">\n                <a href="img/portfolio/fullsize/4.jpg" class="portfolio-box">\n                    <img src="img/portfolio/thumbnails/4.jpg" class="img-responsive" alt="">\n                    <div class="portfolio-box-caption">\n                        <div class="portfolio-box-caption-content">\n                            <div class="project-category text-faded">\n                                Category\n                            </div>\n                            <div class="project-name">\n                                Project Name\n                            </div>\n                        </div>\n                    </div>\n                </a>\n            </div>\n            <div class="col-lg-4 col-sm-6">\n                <a href="img/portfolio/fullsize/5.jpg" class="portfolio-box">\n                    <img src="img/portfolio/thumbnails/5.jpg" class="img-responsive" alt="">\n                    <div class="portfolio-box-caption">\n                        <div class="portfolio-box-caption-content">\n                            <div class="project-category text-faded">\n                                Category\n                            </div>\n                            <div class="project-name">\n                                Project Name\n                            </div>\n                        </div>\n                    </div>\n                </a>\n            </div>\n            <div class="col-lg-4 col-sm-6">\n                <a href="img/portfolio/fullsize/6.jpg" class="portfolio-box">\n                    <img src="img/portfolio/thumbnails/6.jpg" class="img-responsive" alt="">\n                    <div class="portfolio-box-caption">\n                        <div class="portfolio-box-caption-content">\n                            <div class="project-category text-faded">\n                                Category\n                            </div>\n                            <div class="project-name">\n                                Project Name\n                            </div>\n                        </div>\n                    </div>\n                </a>\n            </div>\n        </div>\n    </div>\n</section>\n\n<aside class="bg-dark">\n    <div class="container text-center">\n        <div class="call-to-action">\n            <h2>Free Download at Start Bootstrap!</h2>\n            <a href="http://startbootstrap.com/template-overviews/creative/" class="btn btn-default btn-xl sr-button">Download Now!</a>\n        </div>\n    </div>\n</aside>\n\n<section id="contact">\n    <div class="container">\n        <div class="row">\n            <div class="col-lg-8 col-lg-offset-2 text-center">\n                <h2 class="section-heading">Let\'s Get In Touch!</h2>\n                <hr class="primary">\n                <p>Ready to start your next project with us? That\'s great! Give us a call or send us an email and we will get back to you as soon as possible!</p>\n            </div>\n            <div class="col-lg-4 col-lg-offset-2 text-center">\n                <i class="fa fa-phone fa-3x sr-contact"></i>\n                <p>123-456-6789</p>\n            </div>\n            <div class="col-lg-4 text-center">\n                <i class="fa fa-envelope-o fa-3x sr-contact"></i>\n                <p><a href="mailto:your-email@your-domain.com">feedback@startbootstrap.com</a></p>\n            </div>\n        </div>\n    </div>\n</section>\n');
-  $templateCache.put('layout/app-view.html', '<app-header></app-header>\n<div ui-view></div>\n');
-  $templateCache.put('layout/header.html', '<nav id="mainNav" class="navbar navbar-default navbar-fixed-top">\n    <div class="container-fluid">\n        <!-- Brand and toggle get grouped for better mobile display -->\n        <div class="navbar-header">\n            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">\n                <span class="sr-only">Toggle navigation</span> Menu <i class="fa fa-bars"></i>\n            </button>\n            <a class="navbar-brand page-scroll" href="#page-top">Start Bootstrap</a>\n        </div>\n\n        <!-- Collect the nav links, forms, and other content for toggling -->\n        <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">\n            <ul class="nav navbar-nav navbar-right">\n                <li>\n                    <a class="page-scroll" href="#about">About</a>\n                </li>\n                <li>\n                    <a class="page-scroll" href="#services">Services</a>\n                </li>\n                <li>\n                    <a class="page-scroll" href="#portfolio">Portfolio</a>\n                </li>\n                <li>\n                    <a class="page-scroll" href="#contact">Contact</a>\n                </li>\n            </ul>\n        </div>\n        <!-- /.navbar-collapse -->\n    </div>\n    <!-- /.container-fluid -->\n</nav>\n\n<header>\n    <div class="header-content">\n        <div class="header-content-inner">\n            <h1 id="homeHeading">Your Favorite Source of Free Bootstrap Themes</h1>\n            <hr>\n            <p>Start Bootstrap can help you build better websites using the Bootstrap CSS framework! Just download your template and start going, no strings attached!</p>\n            <a href="#about" class="btn btn-primary btn-xl page-scroll">Find Out More</a>\n        </div>\n    </div>\n</header>\n');
+  $templateCache.put('home/home.html', '<!-- Header -->\n<header>\n    <div class="container">\n        <div class="row">\n            <div class="col-lg-12">\n                <img class="img-responsive" src="img/profile.png" alt="">\n                <div class="intro-text">\n                    <span class="name">Start Bootstrap</span>\n                    <hr class="star-light">\n                    <span class="skills">Web Developer - Graphic Artist - User Experience Designer</span>\n                </div>\n            </div>\n        </div>\n    </div>\n</header>\n\n<!-- Portfolio Grid Section -->\n<section id="portfolio">\n    <div class="container">\n        <div class="row">\n            <div class="col-lg-12 text-center">\n                <h2>Portfolio</h2>\n                <hr class="star-primary">\n            </div>\n        </div>\n        <div class="row">\n            <div class="col-sm-4 portfolio-item">\n                <a href="#portfolioModal1" class="portfolio-link" data-toggle="modal">\n                    <div class="caption">\n                        <div class="caption-content">\n                            <i class="fa fa-search-plus fa-3x"></i>\n                        </div>\n                    </div>\n                    <img src="img/portfolio/cabin.png" class="img-responsive" alt="">\n                </a>\n            </div>\n            <div class="col-sm-4 portfolio-item">\n                <a href="#portfolioModal2" class="portfolio-link" data-toggle="modal">\n                    <div class="caption">\n                        <div class="caption-content">\n                            <i class="fa fa-search-plus fa-3x"></i>\n                        </div>\n                    </div>\n                    <img src="img/portfolio/cake.png" class="img-responsive" alt="">\n                </a>\n            </div>\n            <div class="col-sm-4 portfolio-item">\n                <a href="#portfolioModal3" class="portfolio-link" data-toggle="modal">\n                    <div class="caption">\n                        <div class="caption-content">\n                            <i class="fa fa-search-plus fa-3x"></i>\n                        </div>\n                    </div>\n                    <img src="img/portfolio/circus.png" class="img-responsive" alt="">\n                </a>\n            </div>\n            <div class="col-sm-4 portfolio-item">\n                <a href="#portfolioModal4" class="portfolio-link" data-toggle="modal">\n                    <div class="caption">\n                        <div class="caption-content">\n                            <i class="fa fa-search-plus fa-3x"></i>\n                        </div>\n                    </div>\n                    <img src="img/portfolio/game.png" class="img-responsive" alt="">\n                </a>\n            </div>\n            <div class="col-sm-4 portfolio-item">\n                <a href="#portfolioModal5" class="portfolio-link" data-toggle="modal">\n                    <div class="caption">\n                        <div class="caption-content">\n                            <i class="fa fa-search-plus fa-3x"></i>\n                        </div>\n                    </div>\n                    <img src="img/portfolio/safe.png" class="img-responsive" alt="">\n                </a>\n            </div>\n            <div class="col-sm-4 portfolio-item">\n                <a href="#portfolioModal6" class="portfolio-link" data-toggle="modal">\n                    <div class="caption">\n                        <div class="caption-content">\n                            <i class="fa fa-search-plus fa-3x"></i>\n                        </div>\n                    </div>\n                    <img src="img/portfolio/submarine.png" class="img-responsive" alt="">\n                </a>\n            </div>\n        </div>\n    </div>\n</section>\n\n<!-- About Section -->\n<section class="success" id="about">\n    <div class="container">\n        <div class="row">\n            <div class="col-lg-12 text-center">\n                <h2>About</h2>\n                <hr class="star-light">\n            </div>\n        </div>\n        <div class="row">\n            <div class="col-lg-4 col-lg-offset-2">\n                <p>Freelancer is a free bootstrap theme created by Start Bootstrap. The download includes the complete source files including HTML, CSS, and JavaScript as well as optional LESS stylesheets for easy customization.</p>\n            </div>\n            <div class="col-lg-4">\n                <p>Whether you\'re a student looking to showcase your work, a professional looking to attract clients, or a graphic artist looking to share your projects, this template is the perfect starting point!</p>\n            </div>\n            <div class="col-lg-8 col-lg-offset-2 text-center">\n                <a href="#" class="btn btn-lg btn-outline">\n                    <i class="fa fa-download"></i> Download Theme\n                </a>\n            </div>\n        </div>\n    </div>\n</section>\n\n<!-- Contact Section -->\n<section id="contact">\n    <div class="container">\n        <div class="row">\n            <div class="col-lg-12 text-center">\n                <h2>Contact Me</h2>\n                <hr class="star-primary">\n            </div>\n        </div>\n        <div class="row">\n            <div class="col-lg-8 col-lg-offset-2">\n                <!-- To configure the contact form email address, go to mail/contact_me.php and update the email address in the PHP file on line 19. -->\n                <!-- The form should work on most web servers, but if the form is not working you may need to configure your web server differently. -->\n                <form name="sentMessage" id="contactForm" novalidate>\n                    <div class="row control-group">\n                        <div class="form-group col-xs-12 floating-label-form-group controls">\n                            <label>Name</label>\n                            <input type="text" class="form-control" placeholder="Name" id="name" required data-validation-required-message="Please enter your name.">\n                            <p class="help-block text-danger"></p>\n                        </div>\n                    </div>\n                    <div class="row control-group">\n                        <div class="form-group col-xs-12 floating-label-form-group controls">\n                            <label>Email Address</label>\n                            <input type="email" class="form-control" placeholder="Email Address" id="email" required data-validation-required-message="Please enter your email address.">\n                            <p class="help-block text-danger"></p>\n                        </div>\n                    </div>\n                    <div class="row control-group">\n                        <div class="form-group col-xs-12 floating-label-form-group controls">\n                            <label>Phone Number</label>\n                            <input type="tel" class="form-control" placeholder="Phone Number" id="phone" required data-validation-required-message="Please enter your phone number.">\n                            <p class="help-block text-danger"></p>\n                        </div>\n                    </div>\n                    <div class="row control-group">\n                        <div class="form-group col-xs-12 floating-label-form-group controls">\n                            <label>Message</label>\n                            <textarea rows="5" class="form-control" placeholder="Message" id="message" required data-validation-required-message="Please enter a message."></textarea>\n                            <p class="help-block text-danger"></p>\n                        </div>\n                    </div>\n                    <br>\n                    <div id="success"></div>\n                    <div class="row">\n                        <div class="form-group col-xs-12">\n                            <button type="submit" class="btn btn-success btn-lg">Send</button>\n                        </div>\n                    </div>\n                </form>\n            </div>\n        </div>\n    </div>\n</section>\n\n<!-- Footer -->\n<footer class="text-center">\n    <div class="footer-above">\n        <div class="container">\n            <div class="row">\n                <div class="footer-col col-md-4">\n                    <h3>Location</h3>\n                    <p>3481 Melrose Place\n                        <br>Beverly Hills, CA 90210</p>\n                </div>\n                <div class="footer-col col-md-4">\n                    <h3>Around the Web</h3>\n                    <ul class="list-inline">\n                        <li>\n                            <a href="#" class="btn-social btn-outline"><i class="fa fa-fw fa-facebook"></i></a>\n                        </li>\n                        <li>\n                            <a href="#" class="btn-social btn-outline"><i class="fa fa-fw fa-google-plus"></i></a>\n                        </li>\n                        <li>\n                            <a href="#" class="btn-social btn-outline"><i class="fa fa-fw fa-twitter"></i></a>\n                        </li>\n                        <li>\n                            <a href="#" class="btn-social btn-outline"><i class="fa fa-fw fa-linkedin"></i></a>\n                        </li>\n                        <li>\n                            <a href="#" class="btn-social btn-outline"><i class="fa fa-fw fa-dribbble"></i></a>\n                        </li>\n                    </ul>\n                </div>\n                <div class="footer-col col-md-4">\n                    <h3>About Freelancer</h3>\n                    <p>Freelance is a free to use, open source Bootstrap theme created by <a href="http://startbootstrap.com">Start Bootstrap</a>.</p>\n                </div>\n            </div>\n        </div>\n    </div>\n    <div class="footer-below">\n        <div class="container">\n            <div class="row">\n                <div class="col-lg-12">\n                    Copyright &copy; Your Website 2016\n                </div>\n            </div>\n        </div>\n    </div>\n</footer>\n\n<!-- Scroll to Top Button (Only visible on small and extra-small screen sizes) -->\n<div class="scroll-top page-scroll hidden-sm hidden-xs hidden-lg hidden-md">\n    <a class="btn btn-primary" href="#page-top">\n        <i class="fa fa-chevron-up"></i>\n    </a>\n</div>\n\n<!-- Portfolio Modals -->\n<div class="portfolio-modal modal fade" id="portfolioModal1" tabindex="-1" role="dialog" aria-hidden="true">\n    <div class="modal-content">\n        <div class="close-modal" data-dismiss="modal">\n            <div class="lr">\n                <div class="rl">\n                </div>\n            </div>\n        </div>\n        <div class="container">\n            <div class="row">\n                <div class="col-lg-8 col-lg-offset-2">\n                    <div class="modal-body">\n                        <h2>Project Title</h2>\n                        <hr class="star-primary">\n                        <img src="img/portfolio/cabin.png" class="img-responsive img-centered" alt="">\n                        <p>Use this area of the page to describe your project. The icon above is part of a free icon set by <a href="https://sellfy.com/p/8Q9P/jV3VZ/">Flat Icons</a>. On their website, you can download their free set with 16 icons, or you can purchase the entire set with 146 icons for only $12!</p>\n                        <ul class="list-inline item-details">\n                            <li>Client:\n                                <strong><a href="http://startbootstrap.com">Start Bootstrap</a>\n                                </strong>\n                            </li>\n                            <li>Date:\n                                <strong><a href="http://startbootstrap.com">April 2014</a>\n                                </strong>\n                            </li>\n                            <li>Service:\n                                <strong><a href="http://startbootstrap.com">Web Development</a>\n                                </strong>\n                            </li>\n                        </ul>\n                        <button type="button" class="btn btn-default" data-dismiss="modal"><i class="fa fa-times"></i> Close</button>\n                    </div>\n                </div>\n            </div>\n        </div>\n    </div>\n</div>\n<div class="portfolio-modal modal fade" id="portfolioModal2" tabindex="-1" role="dialog" aria-hidden="true">\n    <div class="modal-content">\n        <div class="close-modal" data-dismiss="modal">\n            <div class="lr">\n                <div class="rl">\n                </div>\n            </div>\n        </div>\n        <div class="container">\n            <div class="row">\n                <div class="col-lg-8 col-lg-offset-2">\n                    <div class="modal-body">\n                        <h2>Project Title</h2>\n                        <hr class="star-primary">\n                        <img src="img/portfolio/cake.png" class="img-responsive img-centered" alt="">\n                        <p>Use this area of the page to describe your project. The icon above is part of a free icon set by <a href="https://sellfy.com/p/8Q9P/jV3VZ/">Flat Icons</a>. On their website, you can download their free set with 16 icons, or you can purchase the entire set with 146 icons for only $12!</p>\n                        <ul class="list-inline item-details">\n                            <li>Client:\n                                <strong><a href="http://startbootstrap.com">Start Bootstrap</a>\n                                </strong>\n                            </li>\n                            <li>Date:\n                                <strong><a href="http://startbootstrap.com">April 2014</a>\n                                </strong>\n                            </li>\n                            <li>Service:\n                                <strong><a href="http://startbootstrap.com">Web Development</a>\n                                </strong>\n                            </li>\n                        </ul>\n                        <button type="button" class="btn btn-default" data-dismiss="modal"><i class="fa fa-times"></i> Close</button>\n                    </div>\n                </div>\n            </div>\n        </div>\n    </div>\n</div>\n<div class="portfolio-modal modal fade" id="portfolioModal3" tabindex="-1" role="dialog" aria-hidden="true">\n    <div class="modal-content">\n        <div class="close-modal" data-dismiss="modal">\n            <div class="lr">\n                <div class="rl">\n                </div>\n            </div>\n        </div>\n        <div class="container">\n            <div class="row">\n                <div class="col-lg-8 col-lg-offset-2">\n                    <div class="modal-body">\n                        <h2>Project Title</h2>\n                        <hr class="star-primary">\n                        <img src="img/portfolio/circus.png" class="img-responsive img-centered" alt="">\n                        <p>Use this area of the page to describe your project. The icon above is part of a free icon set by <a href="https://sellfy.com/p/8Q9P/jV3VZ/">Flat Icons</a>. On their website, you can download their free set with 16 icons, or you can purchase the entire set with 146 icons for only $12!</p>\n                        <ul class="list-inline item-details">\n                            <li>Client:\n                                <strong><a href="http://startbootstrap.com">Start Bootstrap</a>\n                                </strong>\n                            </li>\n                            <li>Date:\n                                <strong><a href="http://startbootstrap.com">April 2014</a>\n                                </strong>\n                            </li>\n                            <li>Service:\n                                <strong><a href="http://startbootstrap.com">Web Development</a>\n                                </strong>\n                            </li>\n                        </ul>\n                        <button type="button" class="btn btn-default" data-dismiss="modal"><i class="fa fa-times"></i> Close</button>\n                    </div>\n                </div>\n            </div>\n        </div>\n    </div>\n</div>\n<div class="portfolio-modal modal fade" id="portfolioModal4" tabindex="-1" role="dialog" aria-hidden="true">\n    <div class="modal-content">\n        <div class="close-modal" data-dismiss="modal">\n            <div class="lr">\n                <div class="rl">\n                </div>\n            </div>\n        </div>\n        <div class="container">\n            <div class="row">\n                <div class="col-lg-8 col-lg-offset-2">\n                    <div class="modal-body">\n                        <h2>Project Title</h2>\n                        <hr class="star-primary">\n                        <img src="img/portfolio/game.png" class="img-responsive img-centered" alt="">\n                        <p>Use this area of the page to describe your project. The icon above is part of a free icon set by <a href="https://sellfy.com/p/8Q9P/jV3VZ/">Flat Icons</a>. On their website, you can download their free set with 16 icons, or you can purchase the entire set with 146 icons for only $12!</p>\n                        <ul class="list-inline item-details">\n                            <li>Client:\n                                <strong><a href="http://startbootstrap.com">Start Bootstrap</a>\n                                </strong>\n                            </li>\n                            <li>Date:\n                                <strong><a href="http://startbootstrap.com">April 2014</a>\n                                </strong>\n                            </li>\n                            <li>Service:\n                                <strong><a href="http://startbootstrap.com">Web Development</a>\n                                </strong>\n                            </li>\n                        </ul>\n                        <button type="button" class="btn btn-default" data-dismiss="modal"><i class="fa fa-times"></i> Close</button>\n                    </div>\n                </div>\n            </div>\n        </div>\n    </div>\n</div>\n<div class="portfolio-modal modal fade" id="portfolioModal5" tabindex="-1" role="dialog" aria-hidden="true">\n    <div class="modal-content">\n        <div class="close-modal" data-dismiss="modal">\n            <div class="lr">\n                <div class="rl">\n                </div>\n            </div>\n        </div>\n        <div class="container">\n            <div class="row">\n                <div class="col-lg-8 col-lg-offset-2">\n                    <div class="modal-body">\n                        <h2>Project Title</h2>\n                        <hr class="star-primary">\n                        <img src="img/portfolio/safe.png" class="img-responsive img-centered" alt="">\n                        <p>Use this area of the page to describe your project. The icon above is part of a free icon set by <a href="https://sellfy.com/p/8Q9P/jV3VZ/">Flat Icons</a>. On their website, you can download their free set with 16 icons, or you can purchase the entire set with 146 icons for only $12!</p>\n                        <ul class="list-inline item-details">\n                            <li>Client:\n                                <strong><a href="http://startbootstrap.com">Start Bootstrap</a>\n                                </strong>\n                            </li>\n                            <li>Date:\n                                <strong><a href="http://startbootstrap.com">April 2014</a>\n                                </strong>\n                            </li>\n                            <li>Service:\n                                <strong><a href="http://startbootstrap.com">Web Development</a>\n                                </strong>\n                            </li>\n                        </ul>\n                        <button type="button" class="btn btn-default" data-dismiss="modal"><i class="fa fa-times"></i> Close</button>\n                    </div>\n                </div>\n            </div>\n        </div>\n    </div>\n</div>\n<div class="portfolio-modal modal fade" id="portfolioModal6" tabindex="-1" role="dialog" aria-hidden="true">\n    <div class="modal-content">\n        <div class="close-modal" data-dismiss="modal">\n            <div class="lr">\n                <div class="rl">\n                </div>\n            </div>\n        </div>\n        <div class="container">\n            <div class="row">\n                <div class="col-lg-8 col-lg-offset-2">\n                    <div class="modal-body">\n                        <h2>Project Title</h2>\n                        <hr class="star-primary">\n                        <img src="img/portfolio/submarine.png" class="img-responsive img-centered" alt="">\n                        <p>Use this area of the page to describe your project. The icon above is part of a free icon set by <a href="https://sellfy.com/p/8Q9P/jV3VZ/">Flat Icons</a>. On their website, you can download their free set with 16 icons, or you can purchase the entire set with 146 icons for only $12!</p>\n                        <ul class="list-inline item-details">\n                            <li>Client:\n                                <strong><a href="http://startbootstrap.com">Start Bootstrap</a>\n                                </strong>\n                            </li>\n                            <li>Date:\n                                <strong><a href="http://startbootstrap.com">April 2014</a>\n                                </strong>\n                            </li>\n                            <li>Service:\n                                <strong><a href="http://startbootstrap.com">Web Development</a>\n                                </strong>\n                            </li>\n                        </ul>\n                        <button type="button" class="btn btn-default" data-dismiss="modal"><i class="fa fa-times"></i> Close</button>\n                    </div>\n                </div>\n            </div>\n        </div>\n    </div>\n</div>\n');
+  $templateCache.put('layout/app-view.html', '<app-header></app-header>\n<div ui-view class="w100 h100"></div>\n');
+  $templateCache.put('layout/header.html', '<nav id="mainNav" class="navbar navbar-default navbar-fixed-top navbar-custom">\n    <div class="container">\n        <!-- Brand and toggle get grouped for better mobile display -->\n        <div class="navbar-header page-scroll">\n            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">\n                <span class="sr-only">Toggle navigation</span> Menu <i class="fa fa-bars"></i>\n            </button>\n            <a class="navbar-brand" ui-sref="app.home">Portfolorian</a>\n        </div>\n\n        <!-- Collect the nav links, forms, and other content for toggling -->\n        <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">\n            <ul class="nav navbar-nav navbar-right">\n              <li>\n                  <a class="page-scroll btn btn-primary" ng-if="!$root.isAuthenticated" ng-click="home._authService.login()">Login</a>\n              </li>\n              <li>\n                  <a class="page-scroll" ui-sref="app.mysite" ng-if="$root.isAuthenticated">My Site</a>\n              </li>\n              <li>\n                  <a class="page-scroll" ng-if="$root.isAuthenticated" ng-click="home._authService.logout()">Logout</a>\n              </li>\n            </ul>\n        </div>\n        <!-- /.navbar-collapse -->\n    </div>\n    <!-- /.container-fluid -->\n</nav>\n');
+  $templateCache.put('mysite/mysite.html', '<!-- Header -->\n<header>\n    <div class="container">\n        <div class="row">\n            <div class="col-lg-12">\n                <div class="intro-text">\n                    <span class="name">My Site configuration</span>\n                    <hr class="star-light">\n                </div>\n            </div>\n        </div>\n    </div>\n</header>\n<section id="mysite">\n    <div class="container">\n        <div class="row">\n            <div class="col-md-12">\n                <form name="mysiteForm">\n                    <div class="col-lg-12 text-center">\n                        <h2>Motto</h2>\n                        <hr class="star-primary">\n                    </div>\n                    <div class="form-group col-xs-12">\n                        <textarea name="motto" rows="2" class="form-control" placeholder="Motto"></textarea>\n                    </div>\n\n                    <div class="col-lg-12 text-center">\n                        <h2>About You</h2>\n                        <hr class="star-primary">\n                    </div>\n                    <div class="form-group col-xs-12">\n                        <textarea class="form-control" placeholder="About you"></textarea>\n                    </div>\n                    <div class="col-lg-12 text-center">\n                        <h2>Contact</h2>\n                        <hr class="star-primary">\n                    </div>\n                    <div class="form-group col-xs-12">\n                        <label for="firstname">Firstname</label>\n                        <input type="text" name="firstname" id="firstname" class="form-control">\n                    </div>\n                    <div class="form-group col-xs-12">\n                        <label for="lastname">Lastname</label>\n                        <input type="text" name="lastname" id="lastname" class="form-control">\n                    </div>\n                    <div class="form-group col-xs-12">\n                        <label for="phhone">Phonel</label>\n                        <input type="phone" name="phone" id="phone" class="form-control">\n                    </div>\n                    <div class="form-group col-xs-12">\n                        <label for="email">E-Mail</label>\n                        <input type="email" name="email" id="email" class="form-control">\n                    </div>\n                    <div class="col-lg-12 text-center">\n                        <h2>Social</h2>\n                        <hr class="star-primary">\n                    </div>\n                    <div class="form group col-xs-12">\n                        <label for="facebook">Facebook</label>\n                        <input type="text" name="facebook" id="facebook" class="form-control">\n                    </div>\n                    <div class="form-group col-xs-12">\n                        <label for="twitter">Twitter</label>\n                        <input type="text" name="twitter" id="twitter" class="form-control">\n                    </div>\n                    <div class="form-group col-xs-12">\n                        <label for="xing">Xing</label>\n                        <input type="text" name="xing" id="xing" class="form-control">\n                    </div>\n                    <div class="form-group col-xs-12">\n                        <button class="btn btn-primary  btn-lg" type="submit">Save</button>\n                    </div>\n                </form>\n            </div>\n        </div>\n    </div>\n\n\n</section>\n');
 }]);
 
-},{}],9:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 'use strict';
 
 HomeConfig.$inject = ["$stateProvider"];
@@ -49040,7 +49804,7 @@ function HomeConfig($stateProvider) {
 
 exports.default = HomeConfig;
 
-},{}],10:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -49059,7 +49823,7 @@ var HomeCtrl = function HomeCtrl() {
 
 exports.default = HomeCtrl;
 
-},{}],11:[function(require,module,exports){
+},{}],18:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -49088,7 +49852,7 @@ homeModule.controller('HomeCtrl', _home4.default);
 
 exports.default = homeModule;
 
-},{"./home.config":9,"./home.controller":10,"angular":3}],12:[function(require,module,exports){
+},{"./home.config":16,"./home.controller":17,"angular":8}],19:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -49097,22 +49861,25 @@ Object.defineProperty(exports, "__esModule", {
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var AppHeaderCtrl = function AppHeaderCtrl() {
+var AppHeaderCtrl = function AppHeaderCtrl(AuthService) {
     'ngInject';
 
     _classCallCheck(this, AppHeaderCtrl);
 
     this.motto = "Das ist ein motto";
+    this._authService = AuthService;
 };
+AppHeaderCtrl.$inject = ["AuthService"];
 
 var AppHeader = {
     controller: AppHeaderCtrl,
+    controllerAs: 'home',
     templateUrl: 'layout/header.html'
 };
 
 exports.default = AppHeader;
 
-},{}],13:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -49135,4 +49902,160 @@ layoutModule.component('appHeader', _header2.default);
 
 exports.default = layoutModule;
 
-},{"./header.component":12,"angular":3}]},{},[6]);
+},{"./header.component":19,"angular":8}],21:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _angular = require('angular');
+
+var _angular2 = _interopRequireDefault(_angular);
+
+var _mysite = require('./mysite.config');
+
+var _mysite2 = _interopRequireDefault(_mysite);
+
+var _mysite3 = require('./mysite.controller');
+
+var _mysite4 = _interopRequireDefault(_mysite3);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+var MySiteModule = _angular2.default.module('app.mysite', []);
+
+MySiteModule.config(_mysite2.default);
+
+MySiteModule.controller('MySiteCtrl', _mysite4.default);
+
+exports.default = MySiteModule;
+
+},{"./mysite.config":22,"./mysite.controller":23,"angular":8}],22:[function(require,module,exports){
+'use strict';
+
+MySiteConfig.$inject = ["$stateProvider"];
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+function MySiteConfig($stateProvider) {
+    'ngInject';
+
+    $stateProvider.state('app.mysite', {
+        url: '/mysite',
+        controller: 'MySiteCtrl',
+        controllerAs: 'mysite',
+        templateUrl: 'mysite/mysite.html',
+        title: 'My Site'
+
+    });
+}
+
+exports.default = MySiteConfig;
+
+},{}],23:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var MySiteCtrl = function MySiteCtrl() {
+    'ngInject';
+
+    _classCallCheck(this, MySiteCtrl);
+
+    this.test = "Hello mysite";
+};
+
+exports.default = MySiteCtrl;
+
+},{}],24:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var AuthService = function () {
+    AuthService.$inject = ["$rootScope", "AppConstants", "lock", "authManager", "store", "$location"];
+    function AuthService($rootScope, AppConstants, lock, authManager, store, $location) {
+        'ngInject';
+
+        _classCallCheck(this, AuthService);
+
+        this._$rootScope = $rootScope;
+        this._lock = lock;
+        this._authManager = authManager;
+        this._store = store;
+        this._$location = $location;
+        this._AppConstants = AppConstants;
+    }
+
+    _createClass(AuthService, [{
+        key: 'login',
+        value: function login() {
+            this._lock.show();
+        }
+    }, {
+        key: 'logout',
+        value: function logout() {
+            this._store.remove(this._AppConstants.store_profile);
+            this._store.remove(this._AppConstants.store_idToken);
+            this._authManager.unauthenticate();
+            this._$location.path('/');
+        }
+    }, {
+        key: 'registerAuthenticationListener',
+        value: function registerAuthenticationListener() {
+            var _this = this;
+
+            this._lock.on('authenticated', function (authResult) {
+                _this._store.set(_this._AppConstants.store_idToken, authResult.idToken);
+                _this._authManager.authenticate();
+
+                _this._lock.getProfile(authResult.idToken, function (error, profile) {
+                    if (error) {
+                        console.log(error);
+                    }
+                    _this._store.set(_this._AppConstants.store_profile, profile);
+                    _this._$location.path('/Admin/MySite');
+                });
+            });
+        }
+    }]);
+
+    return AuthService;
+}();
+
+exports.default = AuthService;
+
+},{}],25:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _angular = require('angular');
+
+var _angular2 = _interopRequireDefault(_angular);
+
+var _auth = require('./auth.service');
+
+var _auth2 = _interopRequireDefault(_auth);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+var servicesModule = _angular2.default.module('app.services', []);
+servicesModule.service('AuthService', _auth2.default);
+
+exports.default = servicesModule;
+
+},{"./auth.service":24,"angular":8}]},{},[11]);

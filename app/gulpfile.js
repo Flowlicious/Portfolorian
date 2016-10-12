@@ -54,9 +54,9 @@ gulp.task('html', function() {
 
 gulp.task('css', function() {
     return gulp.src(['./node_modules/bootstrap/dist/css/bootstrap.min.css',
-            './src/css/site.css','./themes/creative/css/creative.min.css', './themes/creative/vendor/magnific-popup/magnific-popup.css' ,'./node_modules/font-awesome/css/font-awesome.css'
+            './src/css/site.css','./themes/freelancer/css/freelancer.min.css', './node_modules/font-awesome/css/font-awesome.css'
         ])
-        .pipe(concatCss('content.css'))
+        .pipe(concatCss('content.css',{rebaseUrls: false}))
         .pipe(gulp.dest('../server/public/stylesheets'))
 })
 

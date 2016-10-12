@@ -1,16 +1,17 @@
 class AppHeaderCtrl {
-    constructor() {
+    constructor(AuthService) {
         'ngInject';
 
         this.motto = "Das ist ein motto";
-
+        this._authService = AuthService;
     }
 }
 
 
 let AppHeader = {
-  controller: AppHeaderCtrl,
-  templateUrl: 'layout/header.html'
+    controller: AppHeaderCtrl,
+    controllerAs: 'home',
+    templateUrl: 'layout/header.html'
 };
 
 export default AppHeader;
