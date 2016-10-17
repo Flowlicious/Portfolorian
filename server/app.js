@@ -4,17 +4,21 @@ var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 var passport = require('passport');
+var cors = require('cors');
 
 
 var mongoose = require('mongoose');
 require('./models/portfolio');
 require('./models/project');
 
+mongoose.Promise = global.Promise;
 mongoose.connect('mongodb://localhost/portfolorian');
 
 var routes = require('./routes/index');
+var portfolio = require('./routes/portfolio');
 
 var app = express();
+app.use(cors());
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
@@ -28,6 +32,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 
 app.use('/', routes);
+app.use('/api/portfolio',portfolio);
 
 
 // catch 404 and forward to error handler

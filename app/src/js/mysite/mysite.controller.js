@@ -1,10 +1,17 @@
 class MySiteCtrl {
-    constructor() {
+    constructor(PortfolioService) {
         'ngInject';
-        this.test = "Hello mysite";
+        this._PortfolioService = PortfolioService;
+        this.portfolio = {};
     }
 
-
+    save() {
+        this._PortfolioService.add(this.portfolio).success((response) => {
+            console.log(response);
+        }).error((err) => {
+            console.log(err);
+        });
+    }
 }
 
 export default MySiteCtrl;
