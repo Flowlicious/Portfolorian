@@ -1,5 +1,7 @@
-function AppConfig($httpProvider, $stateProvider, $locationProvider, $urlRouterProvider, lockProvider, $provide, jwtOptionsProvider, jwtInterceptorProvider, AppConstants) {
+function AppConfig($httpProvider, $stateProvider, $locationProvider, $urlRouterProvider, lockProvider, $provide, jwtOptionsProvider, jwtInterceptorProvider, AppConstants,LogglyLoggerProvider) {
     'ngInject';
+
+    LogglyLoggerProvider.inputToken(AppConstants.logglyToken);
 
     $stateProvider
         .state('app', {

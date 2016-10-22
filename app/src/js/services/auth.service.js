@@ -1,6 +1,6 @@
 export default class AuthService {
 
-    constructor($rootScope, AppConstants, lock, authManager, store, $location) {
+    constructor($rootScope, AppConstants, lock, authManager, store, $location,$log) {
         'ngInject';
         this._$rootScope = $rootScope;
         this._lock = lock;
@@ -8,6 +8,7 @@ export default class AuthService {
         this._store = store;
         this._$location = $location;
         this._AppConstants = AppConstants;
+        this._$log = $log;
     }
 
     login() {
@@ -28,7 +29,7 @@ export default class AuthService {
 
             this._lock.getProfile(authResult.idToken, (error, profile) => {
                 if (error) {
-                    console.log(error);
+                  this._$log.error(error);
                 }
                 this._store.set(this._AppConstants.store_profile, profile);
                 this._$location.path('/Admin/MySite');

@@ -1,5 +1,5 @@
 class HomeCtrl{
-  constructor(){
+  constructor($log){
     'ngInject';
 
     this.helloWorld = "Hello from Flori23";

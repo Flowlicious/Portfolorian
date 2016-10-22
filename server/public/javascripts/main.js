@@ -448,6 +448,388 @@ module.exports = 'angular-jwt';
 })();
 
 },{}],4:[function(require,module,exports){
+/**
+ *  logglyLogger is a module which will send your log messages to a configured
+ *  [Loggly](http://loggly.com) connector.
+ *
+ *  Major credit should go to Thomas Burleson, who's highly informative blog
+ *  post on [Enhancing AngularJs Logging using Decorators](http://bit.ly/1pOI0bb)
+ *  provided the foundation (if not the majority of the brainpower) for this
+ *  module.
+ */
+; (function( angular ) {
+  "use strict";
+
+  angular.module( 'logglyLogger.logger', [] )
+    .provider( 'LogglyLogger', function() {
+      var self = this;
+
+      var logLevels = [ 'DEBUG', 'INFO', 'WARN', 'ERROR' ];
+
+      var https = true;
+      var extra = {};
+      var includeCurrentUrl = false;
+      var includeTimestamp = false;
+      var includeUserAgent = false;
+      var tag = null;
+      var sendConsoleErrors = false;
+      var logToConsole = true;
+      var loggingEnabled = true;
+      var labels = {};
+
+      // The minimum level of messages that should be sent to loggly.
+      var level = 0;
+
+      var token = null;
+      var endpoint = '://logs-01.loggly.com/inputs/';
+
+        var buildUrl = function () {
+          return (https ? 'https' : 'http') + endpoint + token + '/tag/' + (tag ? tag : 'AngularJS' ) + '/';
+        };
+
+      this.setExtra = function (d) {
+        extra = d;
+        return self;
+      };
+
+      this.fields = function ( d ) {
+        if( angular.isDefined( d ) ) {
+          extra = d;
+          return self;
+        }
+
+        return extra;
+      };
+
+      this.labels = function(l) {
+        if (angular.isObject(l)) {
+          labels = l;
+          return self;
+        }
+
+        return labels;
+      };
+
+      this.inputToken = function ( s ) {
+        if (angular.isDefined(s)) {
+          token = s;
+          return self;
+        }
+
+        return token;
+      };
+
+      this.useHttps = function (flag) {
+        if (angular.isDefined(flag)) {
+          https = !!flag;
+          return self;
+        }
+
+        return https;
+      };
+
+      this.includeUrl = function (flag) {
+        if (angular.isDefined(flag)) {
+          includeCurrentUrl = !!flag;
+          return self;
+        }
+
+        return includeCurrentUrl;
+      };
+
+      this.includeTimestamp = function (flag) {
+        if (angular.isDefined(flag)) {
+          includeTimestamp = !!flag;
+          return self;
+        }
+
+        return includeTimestamp;
+      };
+
+      this.includeUserAgent = function (flag) {
+        if (angular.isDefined(flag)) {
+          includeUserAgent = !!flag;
+          return self;
+        }
+
+        return includeUserAgent;
+      };
+
+      this.inputTag = function (usrTag){
+        if (angular.isDefined(usrTag)) {
+          tag = usrTag;
+          return self;
+        }
+
+        return tag;
+      };
+
+      this.sendConsoleErrors = function (flag){
+        if (angular.isDefined(flag)) {
+          sendConsoleErrors = !!flag;
+          return self;
+        }
+
+        return sendConsoleErrors;
+      };
+
+      this.level = function ( name ) {
+
+        if( angular.isDefined( name ) ) {
+          var newLevel = logLevels.indexOf( name.toUpperCase() );
+
+          if( newLevel < 0 ) {
+            throw "Invalid logging level specified: " + name;
+          } else {
+            level = newLevel;
+          }
+
+          return self;
+        }
+
+        return logLevels[level];
+      };
+
+      this.isLevelEnabled = function( name ) {
+        return logLevels.indexOf( name.toUpperCase() ) >= level;
+      };
+
+      this.loggingEnabled = function (flag) {
+          if (angular.isDefined(flag)) {
+              loggingEnabled = !!flag;
+              return self;
+          }
+
+          return loggingEnabled;
+      };
+
+
+      this.logToConsole = function (flag) {
+        if (angular.isDefined(flag)) {
+          logToConsole = !!flag;
+          return self;
+        }
+
+        return logToConsole;
+      };
+
+      this.$get = [ '$injector', function ($injector) {
+
+        var lastLog = null;
+
+
+        /**
+         * Send the specified data to loggly as a json message.
+         * @param data
+         */
+        var sendMessage = function (data) {
+          //If a token is not configured, don't do anything.
+          if (!token || !loggingEnabled) {
+            return;
+          }
+
+          //TODO we're injecting this here to resolve circular dependency issues.  Is this safe?
+          var $window = $injector.get( '$window' );
+          var $location = $injector.get( '$location' );
+		   //we're injecting $http
+          var $http = $injector.get( '$http' );
+
+          lastLog = new Date();
+
+          var sentData = angular.extend({}, extra, data);
+
+          if (includeCurrentUrl) {
+            sentData.url = $location.absUrl();
+          }
+
+          if( includeTimestamp ) {
+            sentData.timestamp = lastLog.toISOString();
+          }
+
+          if( includeUserAgent ) {
+            sentData.userAgent = $window.navigator.userAgent;
+          }
+
+          //Loggly's API doesn't send us cross-domain headers, so we can't interact directly
+           //Set header
+          var config = {
+            headers: {
+             'Content-Type': 'text/plain'
+            },
+            withCredentials: false
+          };
+
+          // Apply labels
+          for (var label in labels) {
+            if (label in sentData) {
+              sentData[labels[label]] = sentData[label];
+              delete sentData[label];
+            }
+          }
+
+          //Ajax call to send data to loggly
+          $http.post(buildUrl(),sentData,config);
+        };
+
+        var attach = function() {
+        };
+
+        var inputToken = function(s) {
+          if (angular.isDefined(s)) {
+            token = s;
+          }
+
+          return token;
+        };
+
+        return {
+          lastLog: function(){ return lastLog; },
+          sendConsoleErrors: function(){ return sendConsoleErrors; },
+          level : function() { return level; },
+          loggingEnabled: self.loggingEnabled,
+          isLevelEnabled : self.isLevelEnabled,
+          attach: attach,
+          sendMessage: sendMessage,
+          logToConsole: logToConsole,
+          inputToken: inputToken,
+
+          /**
+           * Get or set the fields to be sent with all logged events.
+           * @param d
+           * @returns {*}
+           */
+          fields: function( d ) {
+            if( angular.isDefined( d ) ) {
+              self.fields( d );
+            }
+            return self.fields();
+          }
+        };
+      }];
+
+    } );
+
+
+  angular.module( 'logglyLogger', ['logglyLogger.logger'] )
+    .config( [ '$provide', function( $provide ) {
+
+      $provide.decorator('$log', [ "$delegate", '$injector', function ( $delegate, $injector ) {
+
+        var logger = $injector.get('LogglyLogger');
+
+        // install a window error handler
+        if(logger.sendConsoleErrors() === true) {
+          var _onerror = window.onerror;
+
+          //send console error messages to Loggly
+          window.onerror = function (msg, url, line, col, error) {
+            logger.sendMessage({
+              level : 'ERROR',
+              message: msg,
+              line: line,
+              col: col,
+              stack: error && error.stack
+            });
+
+            if (_onerror && typeof _onerror === 'function') {
+              _onerror.apply(window, arguments);
+            }
+          };
+        }
+
+        var wrapLogFunction = function(logFn, level, loggerName) {
+
+          var wrappedFn = function () {
+            var args = Array.prototype.slice.call(arguments);
+
+            if(logger.logToConsole) {
+              logFn.apply(null, args);
+            }
+
+            // Skip messages that have a level that's lower than the configured level for this logger.
+            if(!logger.loggingEnabled() || !logger.isLevelEnabled( level ) ) {
+              return;
+            }
+
+            var msg = (args.length === 1 ? args[0] : args) || {};
+            var sending = { level: level };
+
+            if(angular.isDefined(msg.stack) || (angular.isDefined(msg[0]) && angular.isDefined(msg[0].stack))) {
+              //handling console errors
+              if(logger.sendConsoleErrors() === true){
+                sending.message = msg.message || msg[0].message;
+                sending.stack = msg.stack || msg[0].stack;
+              }
+              else {
+                return;
+              }
+            }
+            else if(angular.isObject(msg)) {
+              //handling JSON objects
+              sending = angular.extend({}, msg, sending);
+            }
+            else{
+              //sending plain text
+              sending.message = msg;
+            }
+
+            if( loggerName ) {
+              sending.logger = msg;
+            }
+
+            //Send the message to through the loggly sender
+            logger.sendMessage( sending );
+          };
+
+          wrappedFn.logs = [];
+
+          return wrappedFn;
+        };
+
+        var _$log = (function ($delegate) {
+          return {
+            log: $delegate.log,
+            info: $delegate.info,
+            warn: $delegate.warn,
+            error: $delegate.error
+          };
+        })($delegate);
+
+        var getLogger = function ( name ) {
+          return {
+            log:    wrapLogFunction( _$log.log, 'INFO', name ),
+            debug:  wrapLogFunction( _$log.debug, 'DEBUG', name ),
+            info:   wrapLogFunction( _$log.info, 'INFO', name ),
+            warn:   wrapLogFunction( _$log.warn, 'WARN', name ),
+            error:  wrapLogFunction( _$log.error, 'ERROR', name )
+          };
+        };
+
+        //wrap the existing API
+        $delegate.log =    wrapLogFunction($delegate.log, 'INFO');
+        $delegate.debug =  wrapLogFunction($delegate.debug, 'DEBUG');
+        $delegate.info =   wrapLogFunction($delegate.info, 'INFO');
+        $delegate.warn =   wrapLogFunction($delegate.warn, 'WARN');
+        $delegate.error =  wrapLogFunction($delegate.error, 'ERROR');
+
+        //Add some methods
+        $delegate.getLogger = getLogger;
+
+        return $delegate;
+      }]);
+
+    }]);
+
+
+
+})(window.angular);
+
+},{}],5:[function(require,module,exports){
+require('angular');
+require('./angular-loggly-logger');
+module.exports = 'logglyLogger';
+
+},{"./angular-loggly-logger":4,"angular":10}],6:[function(require,module,exports){
 (function() {
 
 
@@ -661,12 +1043,12 @@ angular.module('angular-storage.store', ['angular-storage.internalStore'])
 
 
 }());
-},{}],5:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 require('./dist/angular-storage.js');
 module.exports = 'angular-storage';
 
 
-},{"./dist/angular-storage.js":4}],6:[function(require,module,exports){
+},{"./dist/angular-storage.js":6}],8:[function(require,module,exports){
 /**
  * State-based routing for AngularJS
  * @version v0.3.1
@@ -5243,7 +5625,7 @@ angular.module('ui.router.state')
   .filter('isState', $IsStateFilter)
   .filter('includedByState', $IncludedByStateFilter);
 })(window, window.angular);
-},{}],7:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 /**
  * @license AngularJS v1.5.8
  * (c) 2010-2016 Google, Inc. http://angularjs.org
@@ -37012,11 +37394,11 @@ $provide.value("$locale", {
 })(window);
 
 !window.angular.$$csp().noInlineStyle && window.angular.element(document.head).prepend('<style type="text/css">@charset "UTF-8";[ng\\:cloak],[ng-cloak],[data-ng-cloak],[x-ng-cloak],.ng-cloak,.x-ng-cloak,.ng-hide:not(.ng-hide-animate){display:none !important;}ng\\:form{display:block;}.ng-animate-shim{visibility:hidden;}.ng-anchor{position:absolute;}</style>');
-},{}],8:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 require('./angular');
 module.exports = angular;
 
-},{"./angular":7}],9:[function(require,module,exports){
+},{"./angular":9}],11:[function(require,module,exports){
 /*!
  * Bootstrap v3.3.7 (http://getbootstrap.com)
  * Copyright 2011-2016 Twitter, Inc.
@@ -39395,7 +39777,7 @@ if (typeof jQuery === 'undefined') {
 
 }(jQuery);
 
-},{}],10:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 /*!
  * jQuery JavaScript Library v3.1.1
  * https://jquery.com/
@@ -49617,7 +49999,7 @@ if ( !noGlobal ) {
 return jQuery;
 } );
 
-},{}],11:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 'use strict';
 
 var _angular = require('angular');
@@ -49646,6 +50028,8 @@ require('angular-storage');
 
 require('angular-lock/dist/angular-lock');
 
+require('angular-loggly-logger');
+
 require('./layout');
 
 require('./home');
@@ -49660,7 +50044,7 @@ require('bootstrap/dist/js/bootstrap.js');
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-var requires = ['auth0.lock', 'angular-storage', 'angular-jwt', 'ui.router', 'templates', 'app.layout', 'app.home', 'app.services', 'app.mysite'];
+var requires = ['auth0.lock', 'angular-storage', 'angular-jwt', 'logglyLogger', 'ui.router', 'templates', 'app.layout', 'app.home', 'app.services', 'app.mysite'];
 //import './admin.mysite';
 
 window.app = _angular2.default.module('app', requires);
@@ -49673,17 +50057,19 @@ _angular2.default.bootstrap(document, ['app'], {
     strictDi: true
 });
 
-},{"./config/app.config":12,"./config/app.constants":13,"./config/app.run":14,"./config/app.templates":15,"./home":18,"./layout":20,"./mysite":21,"./services":25,"angular":8,"angular-jwt":2,"angular-lock/dist/angular-lock":3,"angular-storage":5,"angular-ui-router":6,"bootstrap/dist/js/bootstrap.js":9,"jquery":10}],12:[function(require,module,exports){
+},{"./config/app.config":14,"./config/app.constants":15,"./config/app.run":16,"./config/app.templates":17,"./home":20,"./layout":22,"./mysite":23,"./services":27,"angular":10,"angular-jwt":2,"angular-lock/dist/angular-lock":3,"angular-loggly-logger":5,"angular-storage":7,"angular-ui-router":8,"bootstrap/dist/js/bootstrap.js":11,"jquery":12}],14:[function(require,module,exports){
 'use strict';
 
-AppConfig.$inject = ["$httpProvider", "$stateProvider", "$locationProvider", "$urlRouterProvider", "lockProvider", "$provide", "jwtOptionsProvider", "jwtInterceptorProvider", "AppConstants"];
+AppConfig.$inject = ["$httpProvider", "$stateProvider", "$locationProvider", "$urlRouterProvider", "lockProvider", "$provide", "jwtOptionsProvider", "jwtInterceptorProvider", "AppConstants", "LogglyLoggerProvider"];
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-function AppConfig($httpProvider, $stateProvider, $locationProvider, $urlRouterProvider, lockProvider, $provide, jwtOptionsProvider, jwtInterceptorProvider, AppConstants) {
+function AppConfig($httpProvider, $stateProvider, $locationProvider, $urlRouterProvider, lockProvider, $provide, jwtOptionsProvider, jwtInterceptorProvider, AppConstants, LogglyLoggerProvider) {
     'ngInject';
 
     redirect.$inject = ["$q", "$injector", "AuthService", "store", "$location"];
+    LogglyLoggerProvider.inputToken(AppConstants.logglyToken);
+
     $stateProvider.state('app', {
         abstract: true,
         templateUrl: 'layout/app-view.html'
@@ -49731,7 +50117,7 @@ function AppConfig($httpProvider, $stateProvider, $locationProvider, $urlRouterP
 
 exports.default = AppConfig;
 
-},{}],13:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -49740,12 +50126,13 @@ Object.defineProperty(exports, "__esModule", {
 var AppConstants = {
     store_idToken: 'id_token',
     store_profile: 'profile',
-    apiUrl: 'http://localhost:3000/api/'
+    apiUrl: 'http://localhost:3000/api/',
+    logglyToken: '985eff94-bc71-4d53-a6b0-bb70a4178a3c'
 };
 
 exports.default = AppConstants;
 
-},{}],14:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 'use strict';
 
 AppRun.$inject = ["$rootScope", "AuthService", "authManager", "store", "jwtHelper", "$location"];
@@ -49774,7 +50161,7 @@ function AppRun($rootScope, AuthService, authManager, store, jwtHelper, $locatio
 
 exports.default = AppRun;
 
-},{}],15:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 'use strict';
 
 angular.module('templates', []).run(['$templateCache', function ($templateCache) {
@@ -49784,7 +50171,7 @@ angular.module('templates', []).run(['$templateCache', function ($templateCache)
   $templateCache.put('mysite/mysite.html', '<!-- Header -->\n<header>\n    <div class="container">\n        <div class="row">\n            <div class="col-lg-12">\n                <div class="intro-text">\n                    <span class="name">My Site configuration</span>\n                    <hr class="star-light">\n                </div>\n            </div>\n        </div>\n    </div>\n</header>\n<section id="mysite">\n    <div class="container">\n        <div class="row">\n            <div class="col-md-12">\n                <form name="mysiteForm" ng-submit="mysite.save()">\n                    <div class="col-md-12 text-center">\n                        <h2>Motto</h2>\n                        <hr class="star-primary">\n                    </div>\n                    <div class="form-group col-xs-12">\n                        <textarea name="motto" ng-model="mysite.portfolio.motto" rows="2" class="form-control" placeholder="Motto"></textarea>\n                    </div>\n\n                    <div class="col-md-12 text-center">\n                        <h2>About You</h2>\n                        <hr class="star-primary">\n                    </div>\n                    <div class="form-group col-xs-12">\n                        <textarea class="form-control" ng-model="mysite.portfolio.about" placeholder="About you"></textarea>\n                    </div>\n                    <div class="col-md-12 text-center">\n                        <h2>Contact</h2>\n                        <hr class="star-primary">\n                    </div>\n                    <div class="form-group col-xs-12">\n                        <label for="firstname">Firstname</label>\n                        <input type="text" name="firstname" ng-model="mysite.portfolio.firstname" id="firstname" class="form-control">\n                    </div>\n                    <div class="form-group col-xs-12">\n                        <label for="lastname">Lastname</label>\n                        <input type="text" name="lastname" id="lastname" ng-model="mysite.portfolio.lastname" class="form-control">\n                    </div>\n                    <div class="form-group col-xs-12">\n                        <label for="phhone">Phone</label>\n                        <input type="phone" name="phone" ng-model="mysite.portfolio.phone" id="phone" class="form-control">\n                    </div>\n                    <div class="form-group col-xs-12">\n                        <label for="email">E-Mail</label>\n                        <input type="email" name="email" id="email" ng-model="mysite.portfolio.email" class="form-control">\n                    </div>\n                    <div class="col-md-12 text-center">\n                        <h2>Social</h2>\n                        <hr class="star-primary">\n                    </div>\n                    <div class="form group col-xs-12">\n                        <label for="facebook">Facebook</label>\n                        <input type="text" name="facebook" ng-model="mysite.portfolio.facebook" id="facebook" class="form-control">\n                    </div>\n                    <div class="form-group col-xs-12">\n                        <label for="twitter">Twitter</label>\n                        <input type="text" name="twitter" id="twitter" ng-model="mysite.portfolio.twitter" class="form-control">\n                    </div>\n                    <div class="form-group col-xs-12">\n                        <label for="xing">Xing</label>\n                        <input type="text" name="xing" id="xing" ng-model="mysite.portfolio.xing" class="form-control">\n                    </div>\n                    <div class="form-group col-xs-12">\n                        <button class="btn btn-primary  btn-lg" type="submit">Save</button>\n                    </div>\n                </form>\n            </div>\n        </div>\n    </div>\n\n\n</section>\n');
 }]);
 
-},{}],16:[function(require,module,exports){
+},{}],18:[function(require,module,exports){
 'use strict';
 
 HomeConfig.$inject = ["$stateProvider"];
@@ -49805,7 +50192,7 @@ function HomeConfig($stateProvider) {
 
 exports.default = HomeConfig;
 
-},{}],17:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -49814,17 +50201,18 @@ Object.defineProperty(exports, "__esModule", {
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var HomeCtrl = function HomeCtrl() {
+var HomeCtrl = function HomeCtrl($log) {
   'ngInject';
 
   _classCallCheck(this, HomeCtrl);
 
   this.helloWorld = "Hello from Flori23";
 };
+HomeCtrl.$inject = ["$log"];
 
 exports.default = HomeCtrl;
 
-},{}],18:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -49853,7 +50241,7 @@ homeModule.controller('HomeCtrl', _home4.default);
 
 exports.default = homeModule;
 
-},{"./home.config":16,"./home.controller":17,"angular":8}],19:[function(require,module,exports){
+},{"./home.config":18,"./home.controller":19,"angular":10}],21:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -49880,7 +50268,7 @@ var AppHeader = {
 
 exports.default = AppHeader;
 
-},{}],20:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -49903,7 +50291,7 @@ layoutModule.component('appHeader', _header2.default);
 
 exports.default = layoutModule;
 
-},{"./header.component":19,"angular":8}],21:[function(require,module,exports){
+},{"./header.component":21,"angular":10}],23:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -49932,7 +50320,7 @@ MySiteModule.controller('MySiteCtrl', _mysite4.default);
 
 exports.default = MySiteModule;
 
-},{"./mysite.config":22,"./mysite.controller":23,"angular":8}],22:[function(require,module,exports){
+},{"./mysite.config":24,"./mysite.controller":25,"angular":10}],24:[function(require,module,exports){
 'use strict';
 
 MySiteConfig.$inject = ["$stateProvider"];
@@ -49954,7 +50342,7 @@ function MySiteConfig($stateProvider) {
 
 exports.default = MySiteConfig;
 
-},{}],23:[function(require,module,exports){
+},{}],25:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -49966,23 +50354,26 @@ var _createClass = function () { function defineProperties(target, props) { for 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var MySiteCtrl = function () {
-    MySiteCtrl.$inject = ["PortfolioService"];
-    function MySiteCtrl(PortfolioService) {
+    MySiteCtrl.$inject = ["PortfolioService", "$log"];
+    function MySiteCtrl(PortfolioService, $log) {
         'ngInject';
 
         _classCallCheck(this, MySiteCtrl);
 
         this._PortfolioService = PortfolioService;
         this.portfolio = {};
+        this._$log = $log;
     }
 
     _createClass(MySiteCtrl, [{
         key: 'save',
         value: function save() {
+            var _this = this;
+
             this._PortfolioService.add(this.portfolio).success(function (response) {
                 console.log(response);
             }).error(function (err) {
-                console.log(err);
+                _this._$log.error(err);
             });
         }
     }]);
@@ -49992,7 +50383,7 @@ var MySiteCtrl = function () {
 
 exports.default = MySiteCtrl;
 
-},{}],24:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -50004,8 +50395,8 @@ var _createClass = function () { function defineProperties(target, props) { for 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var AuthService = function () {
-    AuthService.$inject = ["$rootScope", "AppConstants", "lock", "authManager", "store", "$location"];
-    function AuthService($rootScope, AppConstants, lock, authManager, store, $location) {
+    AuthService.$inject = ["$rootScope", "AppConstants", "lock", "authManager", "store", "$location", "$log"];
+    function AuthService($rootScope, AppConstants, lock, authManager, store, $location, $log) {
         'ngInject';
 
         _classCallCheck(this, AuthService);
@@ -50016,6 +50407,7 @@ var AuthService = function () {
         this._store = store;
         this._$location = $location;
         this._AppConstants = AppConstants;
+        this._$log = $log;
     }
 
     _createClass(AuthService, [{
@@ -50042,7 +50434,7 @@ var AuthService = function () {
 
                 _this._lock.getProfile(authResult.idToken, function (error, profile) {
                     if (error) {
-                        console.log(error);
+                        _this._$log.error(error);
                     }
                     _this._store.set(_this._AppConstants.store_profile, profile);
                     _this._$location.path('/Admin/MySite');
@@ -50056,7 +50448,7 @@ var AuthService = function () {
 
 exports.default = AuthService;
 
-},{}],25:[function(require,module,exports){
+},{}],27:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -50083,7 +50475,7 @@ servicesModule.service('PortfolioService', _portfolio2.default);
 
 exports.default = servicesModule;
 
-},{"./auth.service":24,"./portfolio.service":26,"angular":8}],26:[function(require,module,exports){
+},{"./auth.service":26,"./portfolio.service":28,"angular":10}],28:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -50130,4 +50522,4 @@ var PortfolioService = function () {
 
 exports.default = PortfolioService;
 
-},{}]},{},[11]);
+},{}]},{},[13]);

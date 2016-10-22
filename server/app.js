@@ -5,7 +5,7 @@ var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 var passport = require('passport');
 var cors = require('cors');
-
+var loggerService = require('./bin/loggerService');
 
 var mongoose = require('mongoose');
 require('./models/portfolio');

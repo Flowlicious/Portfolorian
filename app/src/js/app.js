@@ -9,6 +9,7 @@ import 'angular-ui-router';
 import 'angular-jwt';
 import 'angular-storage';
 import 'angular-lock/dist/angular-lock';
+import 'angular-loggly-logger'
 import './layout';
 import './home';
 import './services';
@@ -24,12 +25,14 @@ const requires = [
     'auth0.lock',
     'angular-storage',
     'angular-jwt',
+    'logglyLogger',
     'ui.router',
     'templates',
     'app.layout',
     'app.home',
     'app.services',
     'app.mysite',
+
     //'app.admin.mysite'
 ]
 
