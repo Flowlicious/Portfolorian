@@ -15,7 +15,7 @@
                   <a class="page-scroll btn btn-primary" ng-if="!$root.isAuthenticated" ng-click="home._authService.login()">Login</a>
               </li>
               <li>
-                  <a class="page-scroll" ui-sref="app.mysite" ng-if="$root.isAuthenticated">My Site</a>
+                  <a class="page-scroll" ui-sref="app.portfolio" ng-if="$root.isAuthenticated">My Portfolio</a>
               </li>
               <li>
                   <a class="page-scroll" ng-if="$root.isAuthenticated" ng-click="home._authService.logout()">Logout</a>

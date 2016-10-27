@@ -1,0 +1,152 @@
+<!-- Header -->
+<header>
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="intro-text">
+                    <span class="name">Portfolio configuration</span>
+                    <hr class="star-light">
+                    <span class="skills" ng-if="portfolioView.portfolio._id">
+                      {{portfolioView.getUrl()}}
+                       <button type="button" class="btn btn-default" clipboard ng-attr-text="portfolioView.getUrl()" aria-label="Left Align">
+                              <span class="fa fa-clipboard fa-2x" aria-hidden="true"></span>
+                    </button>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+<section id="portfolio">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-12">
+                <form name="portfolioForm" ng-submit="portfolioView.save()">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="col-md-12 text-center">
+                                <h2>Motto</h2>
+                                <hr class="star-primary">
+                            </div>
+                            <div class="form-group col-xs-12">
+                                <textarea name="motto" ng-model="portfolioView.portfolio.motto" rows="2" class="form-control" placeholder="Motto"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="col-md-12 text-center">
+                                <h2>About You</h2>
+                                <hr class="star-primary">
+                            </div>
+                            <div class="form-group col-xs-12">
+                                <textarea class="form-control" ng-model="portfolioView.portfolio.about" placeholder="About you"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="col-md-12 text-center">
+                                <h2>Contact</h2>
+                                <hr class="star-primary">
+                            </div>
+                            <div class="form-group col-xs-12">
+                                <label for="firstname">Firstname</label>
+                                <input type="text" name="firstname" ng-model="portfolioView.portfolio.firstname" id="firstname" class="form-control">
+                            </div>
+                            <div class="form-group col-xs-12">
+                                <label for="lastname">Lastname</label>
+                                <input type="text" name="lastname" id="lastname" ng-model="portfolioView.portfolio.lastname" class="form-control">
+                            </div>
+                            <div class="form-group col-xs-12">
+                                <label for="phhone">Phone</label>
+                                <input type="phone" name="phone" ng-model="portfolioView.portfolio.phone" id="phone" class="form-control">
+                            </div>
+                            <div class="form-group col-xs-12">
+                                <label for="email">E-Mail</label>
+                                <input type="email" name="email" id="email" ng-model="portfolioView.portfolio.email" class="form-control">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="row">
+                                <div class="col-md-12 text-center">
+                                    <h2>Projects</h2>
+                                    <hr class="star-primary">
+                                </div>
+                            </div>
+                            <div class="row" ng-repeat="project in portfolioView.portfolio.projects">
+                                <div class="col-md-12">
+                                    <div class="callout" class="callout" ng-class-even="'callout-right'" ng-class-odd="'callout-left'">
+                                        <h4>{{project.title}}</h4>
+                                        <p>{{project.description}}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row margin-top">
+                                <div class="col-md-12 text-center" ng-show="!portfolioView.portfolio.newproject">
+                                    <div class="form-group">
+                                        <button class="btn btn-primary  btn-lg" type="button" ng-click="portfolioView.newproject = {}">Add Project</button>
+                                    </div>
+                                </div>
+                                <div class="col-md-12" ng-show="portfolioView.newproject">
+                                    <div class="row">
+                                        <div class="form group col-xs-12">
+                                            <label for="projectTitle">Title</label>
+                                            <input type="text" name="projectTitle" ng-model="portfolioView.newproject.title" id="projectTitle" class="form-control">
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="form group col-xs-12">
+                                            <label for="projectDescription">Description</label>
+                                            <textarea class="form-control" ng-model="portfolioView.newproject.description" id="projectDescription"></textarea>
+                                        </div>
+                                    </div>
+                                    <div class="row margin-top">
+                                        <div class="form-group col-md-12 text-center">
+                                            <button class="btn btn-primary btn-lg" type="button" ng-click="portfolioView.portfolio.projects.push(portfolioView.newproject); portfolioView.newproject = null">Save</button>
+                                            <button class="btn btn-default btn-lg" type="button" ng-click="portfolioView.newproject = null">Cancel</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="col-md-12 text-center">
+                        <h2>Social</h2>
+                        <hr class="star-primary">
+                    </div>
+                    <div class="form group col-xs-12">
+                        <label for="facebook">Facebook</label>
+                        <input type="text" name="facebook" ng-model="portfolioView.portfolio.facebook" id="facebook" class="form-control">
+                    </div>
+                    <div class="form-group col-xs-12">
+                        <label for="twitter">Twitter</label>
+                        <input type="text" name="twitter" id="twitter" ng-model="portfolioView.portfolio.twitter" class="form-control">
+                    </div>
+                    <div class="form-group col-xs-12">
+                        <label for="xing">Xing</label>
+                        <input type="text" name="xing" id="xing" ng-model="portfolioView.portfolio.xing" class="form-control">
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="form-group col-xs-12">
+                        <button class="btn btn-primary  btn-lg" ng-click="portfolioView.save()" type="submit">Save</button>
+                    </div>
+                </div>
+            </div>
+
+            </form>
+        </div>
+    </div>
+    </div>
+
+
+</section>

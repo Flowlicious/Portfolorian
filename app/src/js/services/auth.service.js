@@ -32,7 +32,7 @@ export default class AuthService {
                   this._$log.error(error);
                 }
                 this._store.set(this._AppConstants.store_profile, profile);
-                this._$location.path('/Admin/MySite');
+                this._$location.path('/Admin/portfolio');
             })
         })
     }

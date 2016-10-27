@@ -1,4 +1,88 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+(function (root, factory) {
+    /* istanbul ignore next */
+    if (typeof define === 'function' && define.amd) {
+        define(['angular'], factory);
+    } else if (typeof module === 'object' && module.exports) {
+        module.exports = factory(require('angular'));
+    } else {
+        root.angularClipboard = factory(root.angular);
+  }
+}(this, function (angular) {
+
+return angular.module('angular-clipboard', [])
+    .factory('clipboard', ['$document', '$window', function ($document, $window) {
+        function createNode(text, context) {
+            var node = $document[0].createElement('textarea');
+            node.style.position = 'absolute';
+            node.textContent = text;
+            node.style.left = '-10000px';
+            node.style.top = ($window.pageYOffset || $document[0].documentElement.scrollTop) + 'px';
+            return node;
+        }
+
+        function copyNode(node) {
+            try {
+                // Set inline style to override css styles
+                $document[0].body.style.webkitUserSelect = 'initial';
+
+                var selection = $document[0].getSelection();
+                selection.removeAllRanges();
+                node.select();
+
+                if(!$document[0].execCommand('copy')) {
+                    throw('failure copy');
+                }
+                selection.removeAllRanges();
+            } finally {
+                // Reset inline style
+                $document[0].body.style.webkitUserSelect = '';
+            }
+        }
+
+        function copyText(text, context) {
+            var node = createNode(text, context);
+            $document[0].body.appendChild(node);
+            copyNode(node);
+            $document[0].body.removeChild(node);
+        }
+
+        return {
+            copyText: copyText,
+            supported: 'queryCommandSupported' in $document[0] && $document[0].queryCommandSupported('copy')
+        };
+    }])
+    .directive('clipboard', ['clipboard', function (clipboard) {
+        return {
+            restrict: 'A',
+            scope: {
+                onCopied: '&',
+                onError: '&',
+                text: '=',
+                supported: '=?'
+            },
+            link: function (scope, element) {
+                scope.supported = clipboard.supported;
+
+                element.on('click', function (event) {
+                    try {
+                        clipboard.copyText(scope.text, element[0]);
+                        if (angular.isFunction(scope.onCopied)) {
+                            scope.$evalAsync(scope.onCopied());
+                        }
+                    } catch (err) {
+                        if (angular.isFunction(scope.onError)) {
+                            scope.$evalAsync(scope.onError({err: err}));
+                        }
+                    }
+                });
+            }
+        };
+    }]);
+
+}));
+
+},{"angular":11}],2:[function(require,module,exports){
 (function() {
 
 
@@ -353,12 +437,12 @@ angular.module('angular-jwt.options', [])
   });
 
 }());
-},{}],2:[function(require,module,exports){
+},{}],3:[function(require,module,exports){
 require('./dist/angular-jwt.js');
 module.exports = 'angular-jwt';
 
 
-},{"./dist/angular-jwt.js":1}],3:[function(require,module,exports){
+},{"./dist/angular-jwt.js":2}],4:[function(require,module,exports){
 ;(function() {
 
   'use strict';
@@ -447,7 +531,7 @@ module.exports = 'angular-jwt';
   }
 })();
 
-},{}],4:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 /**
  *  logglyLogger is a module which will send your log messages to a configured
  *  [Loggly](http://loggly.com) connector.
@@ -824,12 +908,12 @@ module.exports = 'angular-jwt';
 
 })(window.angular);
 
-},{}],5:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
 require('angular');
 require('./angular-loggly-logger');
 module.exports = 'logglyLogger';
 
-},{"./angular-loggly-logger":4,"angular":10}],6:[function(require,module,exports){
+},{"./angular-loggly-logger":5,"angular":11}],7:[function(require,module,exports){
 (function() {
 
 
@@ -1043,12 +1127,12 @@ angular.module('angular-storage.store', ['angular-storage.internalStore'])
 
 
 }());
-},{}],7:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 require('./dist/angular-storage.js');
 module.exports = 'angular-storage';
 
 
-},{"./dist/angular-storage.js":6}],8:[function(require,module,exports){
+},{"./dist/angular-storage.js":7}],9:[function(require,module,exports){
 /**
  * State-based routing for AngularJS
  * @version v0.3.1
@@ -5625,7 +5709,7 @@ angular.module('ui.router.state')
   .filter('isState', $IsStateFilter)
   .filter('includedByState', $IncludedByStateFilter);
 })(window, window.angular);
-},{}],9:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 /**
  * @license AngularJS v1.5.8
  * (c) 2010-2016 Google, Inc. http://angularjs.org
@@ -37394,11 +37478,11 @@ $provide.value("$locale", {
 })(window);
 
 !window.angular.$$csp().noInlineStyle && window.angular.element(document.head).prepend('<style type="text/css">@charset "UTF-8";[ng\\:cloak],[ng-cloak],[data-ng-cloak],[x-ng-cloak],.ng-cloak,.x-ng-cloak,.ng-hide:not(.ng-hide-animate){display:none !important;}ng\\:form{display:block;}.ng-animate-shim{visibility:hidden;}.ng-anchor{position:absolute;}</style>');
-},{}],10:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 require('./angular');
 module.exports = angular;
 
-},{"./angular":9}],11:[function(require,module,exports){
+},{"./angular":10}],12:[function(require,module,exports){
 /*!
  * Bootstrap v3.3.7 (http://getbootstrap.com)
  * Copyright 2011-2016 Twitter, Inc.
@@ -39777,7 +39861,7 @@ if (typeof jQuery === 'undefined') {
 
 }(jQuery);
 
-},{}],12:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 /*!
  * jQuery JavaScript Library v3.1.1
  * https://jquery.com/
@@ -49999,7 +50083,7 @@ if ( !noGlobal ) {
 return jQuery;
 } );
 
-},{}],13:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
 'use strict';
 
 var _angular = require('angular');
@@ -50030,6 +50114,8 @@ require('angular-lock/dist/angular-lock');
 
 require('angular-loggly-logger');
 
+require('angular-clipboard');
+
 require('./layout');
 
 require('./home');
@@ -50038,14 +50124,13 @@ require('./services');
 
 require('./config/app.templates');
 
-require('./mysite');
+require('./portfolio');
 
 require('bootstrap/dist/js/bootstrap.js');
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-var requires = ['auth0.lock', 'angular-storage', 'angular-jwt', 'logglyLogger', 'ui.router', 'templates', 'app.layout', 'app.home', 'app.services', 'app.mysite'];
-//import './admin.mysite';
+var requires = ['auth0.lock', 'angular-storage', 'angular-jwt', 'logglyLogger', 'angular-clipboard', 'ui.router', 'templates', 'app.layout', 'app.home', 'app.services', 'app.portfolio'];
 
 window.app = _angular2.default.module('app', requires);
 
@@ -50057,7 +50142,7 @@ _angular2.default.bootstrap(document, ['app'], {
     strictDi: true
 });
 
-},{"./config/app.config":14,"./config/app.constants":15,"./config/app.run":16,"./config/app.templates":17,"./home":20,"./layout":22,"./mysite":23,"./services":27,"angular":10,"angular-jwt":2,"angular-lock/dist/angular-lock":3,"angular-loggly-logger":5,"angular-storage":7,"angular-ui-router":8,"bootstrap/dist/js/bootstrap.js":11,"jquery":12}],14:[function(require,module,exports){
+},{"./config/app.config":15,"./config/app.constants":16,"./config/app.run":17,"./config/app.templates":18,"./home":21,"./layout":23,"./portfolio":24,"./services":28,"angular":11,"angular-clipboard":1,"angular-jwt":3,"angular-lock/dist/angular-lock":4,"angular-loggly-logger":6,"angular-storage":8,"angular-ui-router":9,"bootstrap/dist/js/bootstrap.js":12,"jquery":13}],15:[function(require,module,exports){
 'use strict';
 
 AppConfig.$inject = ["$httpProvider", "$stateProvider", "$locationProvider", "$urlRouterProvider", "lockProvider", "$provide", "jwtOptionsProvider", "jwtInterceptorProvider", "AppConstants", "LogglyLoggerProvider"];
@@ -50117,7 +50202,7 @@ function AppConfig($httpProvider, $stateProvider, $locationProvider, $urlRouterP
 
 exports.default = AppConfig;
 
-},{}],15:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -50127,12 +50212,13 @@ var AppConstants = {
     store_idToken: 'id_token',
     store_profile: 'profile',
     apiUrl: 'http://localhost:3000/api/',
-    logglyToken: '985eff94-bc71-4d53-a6b0-bb70a4178a3c'
+    logglyToken: '985eff94-bc71-4d53-a6b0-bb70a4178a3c',
+    portfoliourl: 'http://localhost:3000/portfolio/'
 };
 
 exports.default = AppConstants;
 
-},{}],16:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 'use strict';
 
 AppRun.$inject = ["$rootScope", "AuthService", "authManager", "store", "jwtHelper", "$location"];
@@ -50161,17 +50247,18 @@ function AppRun($rootScope, AuthService, authManager, store, jwtHelper, $locatio
 
 exports.default = AppRun;
 
-},{}],17:[function(require,module,exports){
+},{}],18:[function(require,module,exports){
 'use strict';
 
 angular.module('templates', []).run(['$templateCache', function ($templateCache) {
   $templateCache.put('home/home.html', '<!-- Header -->\n<header>\n    <div class="container">\n        <div class="row">\n            <div class="col-lg-12">\n                <img class="img-responsive" src="img/profile.png" alt="">\n                <div class="intro-text">\n                    <span class="name">Start Bootstrap</span>\n                    <hr class="star-light">\n                    <span class="skills">Web Developer - Graphic Artist - User Experience Designer</span>\n                </div>\n            </div>\n        </div>\n    </div>\n</header>\n\n<!-- Portfolio Grid Section -->\n<section id="portfolio">\n    <div class="container">\n        <div class="row">\n            <div class="col-lg-12 text-center">\n                <h2>Portfolio</h2>\n                <hr class="star-primary">\n            </div>\n        </div>\n        <div class="row">\n            <div class="col-sm-4 portfolio-item">\n                <a href="#portfolioModal1" class="portfolio-link" data-toggle="modal">\n                    <div class="caption">\n                        <div class="caption-content">\n                            <i class="fa fa-search-plus fa-3x"></i>\n                        </div>\n                    </div>\n                    <img src="img/portfolio/cabin.png" class="img-responsive" alt="">\n                </a>\n            </div>\n            <div class="col-sm-4 portfolio-item">\n                <a href="#portfolioModal2" class="portfolio-link" data-toggle="modal">\n                    <div class="caption">\n                        <div class="caption-content">\n                            <i class="fa fa-search-plus fa-3x"></i>\n                        </div>\n                    </div>\n                    <img src="img/portfolio/cake.png" class="img-responsive" alt="">\n                </a>\n            </div>\n            <div class="col-sm-4 portfolio-item">\n                <a href="#portfolioModal3" class="portfolio-link" data-toggle="modal">\n                    <div class="caption">\n                        <div class="caption-content">\n                            <i class="fa fa-search-plus fa-3x"></i>\n                        </div>\n                    </div>\n                    <img src="img/portfolio/circus.png" class="img-responsive" alt="">\n                </a>\n            </div>\n            <div class="col-sm-4 portfolio-item">\n                <a href="#portfolioModal4" class="portfolio-link" data-toggle="modal">\n                    <div class="caption">\n                        <div class="caption-content">\n                            <i class="fa fa-search-plus fa-3x"></i>\n                        </div>\n                    </div>\n                    <img src="img/portfolio/game.png" class="img-responsive" alt="">\n                </a>\n            </div>\n            <div class="col-sm-4 portfolio-item">\n                <a href="#portfolioModal5" class="portfolio-link" data-toggle="modal">\n                    <div class="caption">\n                        <div class="caption-content">\n                            <i class="fa fa-search-plus fa-3x"></i>\n                        </div>\n                    </div>\n                    <img src="img/portfolio/safe.png" class="img-responsive" alt="">\n                </a>\n            </div>\n            <div class="col-sm-4 portfolio-item">\n                <a href="#portfolioModal6" class="portfolio-link" data-toggle="modal">\n                    <div class="caption">\n                        <div class="caption-content">\n                            <i class="fa fa-search-plus fa-3x"></i>\n                        </div>\n                    </div>\n                    <img src="img/portfolio/submarine.png" class="img-responsive" alt="">\n                </a>\n            </div>\n        </div>\n    </div>\n</section>\n\n<!-- About Section -->\n<section class="success" id="about">\n    <div class="container">\n        <div class="row">\n            <div class="col-lg-12 text-center">\n                <h2>About</h2>\n                <hr class="star-light">\n            </div>\n        </div>\n        <div class="row">\n            <div class="col-lg-4 col-lg-offset-2">\n                <p>Freelancer is a free bootstrap theme created by Start Bootstrap. The download includes the complete source files including HTML, CSS, and JavaScript as well as optional LESS stylesheets for easy customization.</p>\n            </div>\n            <div class="col-lg-4">\n                <p>Whether you\'re a student looking to showcase your work, a professional looking to attract clients, or a graphic artist looking to share your projects, this template is the perfect starting point!</p>\n            </div>\n            <div class="col-lg-8 col-lg-offset-2 text-center">\n                <a href="#" class="btn btn-lg btn-outline">\n                    <i class="fa fa-download"></i> Download Theme\n                </a>\n            </div>\n        </div>\n    </div>\n</section>\n\n<!-- Contact Section -->\n<section id="contact">\n    <div class="container">\n        <div class="row">\n            <div class="col-lg-12 text-center">\n                <h2>Contact Me</h2>\n                <hr class="star-primary">\n            </div>\n        </div>\n        <div class="row">\n            <div class="col-lg-8 col-lg-offset-2">\n                <!-- To configure the contact form email address, go to mail/contact_me.php and update the email address in the PHP file on line 19. -->\n                <!-- The form should work on most web servers, but if the form is not working you may need to configure your web server differently. -->\n                <form name="sentMessage" id="contactForm" novalidate>\n                    <div class="row control-group">\n                        <div class="form-group col-xs-12 floating-label-form-group controls">\n                            <label>Name</label>\n                            <input type="text" class="form-control" placeholder="Name" id="name" required data-validation-required-message="Please enter your name.">\n                            <p class="help-block text-danger"></p>\n                        </div>\n                    </div>\n                    <div class="row control-group">\n                        <div class="form-group col-xs-12 floating-label-form-group controls">\n                            <label>Email Address</label>\n                            <input type="email" class="form-control" placeholder="Email Address" id="email" required data-validation-required-message="Please enter your email address.">\n                            <p class="help-block text-danger"></p>\n                        </div>\n                    </div>\n                    <div class="row control-group">\n                        <div class="form-group col-xs-12 floating-label-form-group controls">\n                            <label>Phone Number</label>\n                            <input type="tel" class="form-control" placeholder="Phone Number" id="phone" required data-validation-required-message="Please enter your phone number.">\n                            <p class="help-block text-danger"></p>\n                        </div>\n                    </div>\n                    <div class="row control-group">\n                        <div class="form-group col-xs-12 floating-label-form-group controls">\n                            <label>Message</label>\n                            <textarea rows="5" class="form-control" placeholder="Message" id="message" required data-validation-required-message="Please enter a message."></textarea>\n                            <p class="help-block text-danger"></p>\n                        </div>\n                    </div>\n                    <br>\n                    <div id="success"></div>\n                    <div class="row">\n                        <div class="form-group col-xs-12">\n                            <button type="submit" class="btn btn-success btn-lg">Send</button>\n                        </div>\n                    </div>\n                </form>\n            </div>\n        </div>\n    </div>\n</section>\n\n<!-- Footer -->\n<footer class="text-center">\n    <div class="footer-above">\n        <div class="container">\n            <div class="row">\n                <div class="footer-col col-md-4">\n                    <h3>Location</h3>\n                    <p>3481 Melrose Place\n                        <br>Beverly Hills, CA 90210</p>\n                </div>\n                <div class="footer-col col-md-4">\n                    <h3>Around the Web</h3>\n                    <ul class="list-inline">\n                        <li>\n                            <a href="#" class="btn-social btn-outline"><i class="fa fa-fw fa-facebook"></i></a>\n                        </li>\n                        <li>\n                            <a href="#" class="btn-social btn-outline"><i class="fa fa-fw fa-google-plus"></i></a>\n                        </li>\n                        <li>\n                            <a href="#" class="btn-social btn-outline"><i class="fa fa-fw fa-twitter"></i></a>\n                        </li>\n                        <li>\n                            <a href="#" class="btn-social btn-outline"><i class="fa fa-fw fa-linkedin"></i></a>\n                        </li>\n                        <li>\n                            <a href="#" class="btn-social btn-outline"><i class="fa fa-fw fa-dribbble"></i></a>\n                        </li>\n                    </ul>\n                </div>\n                <div class="footer-col col-md-4">\n                    <h3>About Freelancer</h3>\n                    <p>Freelance is a free to use, open source Bootstrap theme created by <a href="http://startbootstrap.com">Start Bootstrap</a>.</p>\n                </div>\n            </div>\n        </div>\n    </div>\n    <div class="footer-below">\n        <div class="container">\n            <div class="row">\n                <div class="col-lg-12">\n                    Copyright &copy; Your Website 2016\n                </div>\n            </div>\n        </div>\n    </div>\n</footer>\n\n<!-- Scroll to Top Button (Only visible on small and extra-small screen sizes) -->\n<div class="scroll-top page-scroll hidden-sm hidden-xs hidden-lg hidden-md">\n    <a class="btn btn-primary" href="#page-top">\n        <i class="fa fa-chevron-up"></i>\n    </a>\n</div>\n\n<!-- Portfolio Modals -->\n<div class="portfolio-modal modal fade" id="portfolioModal1" tabindex="-1" role="dialog" aria-hidden="true">\n    <div class="modal-content">\n        <div class="close-modal" data-dismiss="modal">\n            <div class="lr">\n                <div class="rl">\n                </div>\n            </div>\n        </div>\n        <div class="container">\n            <div class="row">\n                <div class="col-lg-8 col-lg-offset-2">\n                    <div class="modal-body">\n                        <h2>Project Title</h2>\n                        <hr class="star-primary">\n                        <img src="img/portfolio/cabin.png" class="img-responsive img-centered" alt="">\n                        <p>Use this area of the page to describe your project. The icon above is part of a free icon set by <a href="https://sellfy.com/p/8Q9P/jV3VZ/">Flat Icons</a>. On their website, you can download their free set with 16 icons, or you can purchase the entire set with 146 icons for only $12!</p>\n                        <ul class="list-inline item-details">\n                            <li>Client:\n                                <strong><a href="http://startbootstrap.com">Start Bootstrap</a>\n                                </strong>\n                            </li>\n                            <li>Date:\n                                <strong><a href="http://startbootstrap.com">April 2014</a>\n                                </strong>\n                            </li>\n                            <li>Service:\n                                <strong><a href="http://startbootstrap.com">Web Development</a>\n                                </strong>\n                            </li>\n                        </ul>\n                        <button type="button" class="btn btn-default" data-dismiss="modal"><i class="fa fa-times"></i> Close</button>\n                    </div>\n                </div>\n            </div>\n        </div>\n    </div>\n</div>\n<div class="portfolio-modal modal fade" id="portfolioModal2" tabindex="-1" role="dialog" aria-hidden="true">\n    <div class="modal-content">\n        <div class="close-modal" data-dismiss="modal">\n            <div class="lr">\n                <div class="rl">\n                </div>\n            </div>\n        </div>\n        <div class="container">\n            <div class="row">\n                <div class="col-lg-8 col-lg-offset-2">\n                    <div class="modal-body">\n                        <h2>Project Title</h2>\n                        <hr class="star-primary">\n                        <img src="img/portfolio/cake.png" class="img-responsive img-centered" alt="">\n                        <p>Use this area of the page to describe your project. The icon above is part of a free icon set by <a href="https://sellfy.com/p/8Q9P/jV3VZ/">Flat Icons</a>. On their website, you can download their free set with 16 icons, or you can purchase the entire set with 146 icons for only $12!</p>\n                        <ul class="list-inline item-details">\n                            <li>Client:\n                                <strong><a href="http://startbootstrap.com">Start Bootstrap</a>\n                                </strong>\n                            </li>\n                            <li>Date:\n                                <strong><a href="http://startbootstrap.com">April 2014</a>\n                                </strong>\n                            </li>\n                            <li>Service:\n                                <strong><a href="http://startbootstrap.com">Web Development</a>\n                                </strong>\n                            </li>\n                        </ul>\n                        <button type="button" class="btn btn-default" data-dismiss="modal"><i class="fa fa-times"></i> Close</button>\n                    </div>\n                </div>\n            </div>\n        </div>\n    </div>\n</div>\n<div class="portfolio-modal modal fade" id="portfolioModal3" tabindex="-1" role="dialog" aria-hidden="true">\n    <div class="modal-content">\n        <div class="close-modal" data-dismiss="modal">\n            <div class="lr">\n                <div class="rl">\n                </div>\n            </div>\n        </div>\n        <div class="container">\n            <div class="row">\n                <div class="col-lg-8 col-lg-offset-2">\n                    <div class="modal-body">\n                        <h2>Project Title</h2>\n                        <hr class="star-primary">\n                        <img src="img/portfolio/circus.png" class="img-responsive img-centered" alt="">\n                        <p>Use this area of the page to describe your project. The icon above is part of a free icon set by <a href="https://sellfy.com/p/8Q9P/jV3VZ/">Flat Icons</a>. On their website, you can download their free set with 16 icons, or you can purchase the entire set with 146 icons for only $12!</p>\n                        <ul class="list-inline item-details">\n                            <li>Client:\n                                <strong><a href="http://startbootstrap.com">Start Bootstrap</a>\n                                </strong>\n                            </li>\n                            <li>Date:\n                                <strong><a href="http://startbootstrap.com">April 2014</a>\n                                </strong>\n                            </li>\n                            <li>Service:\n                                <strong><a href="http://startbootstrap.com">Web Development</a>\n                                </strong>\n                            </li>\n                        </ul>\n                        <button type="button" class="btn btn-default" data-dismiss="modal"><i class="fa fa-times"></i> Close</button>\n                    </div>\n                </div>\n            </div>\n        </div>\n    </div>\n</div>\n<div class="portfolio-modal modal fade" id="portfolioModal4" tabindex="-1" role="dialog" aria-hidden="true">\n    <div class="modal-content">\n        <div class="close-modal" data-dismiss="modal">\n            <div class="lr">\n                <div class="rl">\n                </div>\n            </div>\n        </div>\n        <div class="container">\n            <div class="row">\n                <div class="col-lg-8 col-lg-offset-2">\n                    <div class="modal-body">\n                        <h2>Project Title</h2>\n                        <hr class="star-primary">\n                        <img src="img/portfolio/game.png" class="img-responsive img-centered" alt="">\n                        <p>Use this area of the page to describe your project. The icon above is part of a free icon set by <a href="https://sellfy.com/p/8Q9P/jV3VZ/">Flat Icons</a>. On their website, you can download their free set with 16 icons, or you can purchase the entire set with 146 icons for only $12!</p>\n                        <ul class="list-inline item-details">\n                            <li>Client:\n                                <strong><a href="http://startbootstrap.com">Start Bootstrap</a>\n                                </strong>\n                            </li>\n                            <li>Date:\n                                <strong><a href="http://startbootstrap.com">April 2014</a>\n                                </strong>\n                            </li>\n                            <li>Service:\n                                <strong><a href="http://startbootstrap.com">Web Development</a>\n                                </strong>\n                            </li>\n                        </ul>\n                        <button type="button" class="btn btn-default" data-dismiss="modal"><i class="fa fa-times"></i> Close</button>\n                    </div>\n                </div>\n            </div>\n        </div>\n    </div>\n</div>\n<div class="portfolio-modal modal fade" id="portfolioModal5" tabindex="-1" role="dialog" aria-hidden="true">\n    <div class="modal-content">\n        <div class="close-modal" data-dismiss="modal">\n            <div class="lr">\n                <div class="rl">\n                </div>\n            </div>\n        </div>\n        <div class="container">\n            <div class="row">\n                <div class="col-lg-8 col-lg-offset-2">\n                    <div class="modal-body">\n                        <h2>Project Title</h2>\n                        <hr class="star-primary">\n                        <img src="img/portfolio/safe.png" class="img-responsive img-centered" alt="">\n                        <p>Use this area of the page to describe your project. The icon above is part of a free icon set by <a href="https://sellfy.com/p/8Q9P/jV3VZ/">Flat Icons</a>. On their website, you can download their free set with 16 icons, or you can purchase the entire set with 146 icons for only $12!</p>\n                        <ul class="list-inline item-details">\n                            <li>Client:\n                                <strong><a href="http://startbootstrap.com">Start Bootstrap</a>\n                                </strong>\n                            </li>\n                            <li>Date:\n                                <strong><a href="http://startbootstrap.com">April 2014</a>\n                                </strong>\n                            </li>\n                            <li>Service:\n                                <strong><a href="http://startbootstrap.com">Web Development</a>\n                                </strong>\n                            </li>\n                        </ul>\n                        <button type="button" class="btn btn-default" data-dismiss="modal"><i class="fa fa-times"></i> Close</button>\n                    </div>\n                </div>\n            </div>\n        </div>\n    </div>\n</div>\n<div class="portfolio-modal modal fade" id="portfolioModal6" tabindex="-1" role="dialog" aria-hidden="true">\n    <div class="modal-content">\n        <div class="close-modal" data-dismiss="modal">\n            <div class="lr">\n                <div class="rl">\n                </div>\n            </div>\n        </div>\n        <div class="container">\n            <div class="row">\n                <div class="col-lg-8 col-lg-offset-2">\n                    <div class="modal-body">\n                        <h2>Project Title</h2>\n                        <hr class="star-primary">\n                        <img src="img/portfolio/submarine.png" class="img-responsive img-centered" alt="">\n                        <p>Use this area of the page to describe your project. The icon above is part of a free icon set by <a href="https://sellfy.com/p/8Q9P/jV3VZ/">Flat Icons</a>. On their website, you can download their free set with 16 icons, or you can purchase the entire set with 146 icons for only $12!</p>\n                        <ul class="list-inline item-details">\n                            <li>Client:\n                                <strong><a href="http://startbootstrap.com">Start Bootstrap</a>\n                                </strong>\n                            </li>\n                            <li>Date:\n                                <strong><a href="http://startbootstrap.com">April 2014</a>\n                                </strong>\n                            </li>\n                            <li>Service:\n                                <strong><a href="http://startbootstrap.com">Web Development</a>\n                                </strong>\n                            </li>\n                        </ul>\n                        <button type="button" class="btn btn-default" data-dismiss="modal"><i class="fa fa-times"></i> Close</button>\n                    </div>\n                </div>\n            </div>\n        </div>\n    </div>\n</div>\n');
   $templateCache.put('layout/app-view.html', '<app-header></app-header>\n<div ui-view class="w100 h100"></div>\n');
-  $templateCache.put('layout/header.html', '<nav id="mainNav" class="navbar navbar-default navbar-fixed-top navbar-custom">\n    <div class="container">\n        <!-- Brand and toggle get grouped for better mobile display -->\n        <div class="navbar-header page-scroll">\n            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">\n                <span class="sr-only">Toggle navigation</span> Menu <i class="fa fa-bars"></i>\n            </button>\n            <a class="navbar-brand" ui-sref="app.home">Portfolorian</a>\n        </div>\n\n        <!-- Collect the nav links, forms, and other content for toggling -->\n        <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">\n            <ul class="nav navbar-nav navbar-right">\n              <li>\n                  <a class="page-scroll btn btn-primary" ng-if="!$root.isAuthenticated" ng-click="home._authService.login()">Login</a>\n              </li>\n              <li>\n                  <a class="page-scroll" ui-sref="app.mysite" ng-if="$root.isAuthenticated">My Site</a>\n              </li>\n              <li>\n                  <a class="page-scroll" ng-if="$root.isAuthenticated" ng-click="home._authService.logout()">Logout</a>\n              </li>\n            </ul>\n        </div>\n        <!-- /.navbar-collapse -->\n    </div>\n    <!-- /.container-fluid -->\n</nav>\n');
-  $templateCache.put('mysite/mysite.html', '<!-- Header -->\n<header>\n    <div class="container">\n        <div class="row">\n            <div class="col-lg-12">\n                <div class="intro-text">\n                    <span class="name">My Site configuration</span>\n                    <hr class="star-light">\n                </div>\n            </div>\n        </div>\n    </div>\n</header>\n<section id="mysite">\n    <div class="container">\n        <div class="row">\n            <div class="col-md-12">\n                <form name="mysiteForm" ng-submit="mysite.save()">\n                    <div class="col-md-12 text-center">\n                        <h2>Motto</h2>\n                        <hr class="star-primary">\n                    </div>\n                    <div class="form-group col-xs-12">\n                        <textarea name="motto" ng-model="mysite.portfolio.motto" rows="2" class="form-control" placeholder="Motto"></textarea>\n                    </div>\n\n                    <div class="col-md-12 text-center">\n                        <h2>About You</h2>\n                        <hr class="star-primary">\n                    </div>\n                    <div class="form-group col-xs-12">\n                        <textarea class="form-control" ng-model="mysite.portfolio.about" placeholder="About you"></textarea>\n                    </div>\n                    <div class="col-md-12 text-center">\n                        <h2>Contact</h2>\n                        <hr class="star-primary">\n                    </div>\n                    <div class="form-group col-xs-12">\n                        <label for="firstname">Firstname</label>\n                        <input type="text" name="firstname" ng-model="mysite.portfolio.firstname" id="firstname" class="form-control">\n                    </div>\n                    <div class="form-group col-xs-12">\n                        <label for="lastname">Lastname</label>\n                        <input type="text" name="lastname" id="lastname" ng-model="mysite.portfolio.lastname" class="form-control">\n                    </div>\n                    <div class="form-group col-xs-12">\n                        <label for="phhone">Phone</label>\n                        <input type="phone" name="phone" ng-model="mysite.portfolio.phone" id="phone" class="form-control">\n                    </div>\n                    <div class="form-group col-xs-12">\n                        <label for="email">E-Mail</label>\n                        <input type="email" name="email" id="email" ng-model="mysite.portfolio.email" class="form-control">\n                    </div>\n                    <div class="col-md-12 text-center">\n                        <h2>Social</h2>\n                        <hr class="star-primary">\n                    </div>\n                    <div class="form group col-xs-12">\n                        <label for="facebook">Facebook</label>\n                        <input type="text" name="facebook" ng-model="mysite.portfolio.facebook" id="facebook" class="form-control">\n                    </div>\n                    <div class="form-group col-xs-12">\n                        <label for="twitter">Twitter</label>\n                        <input type="text" name="twitter" id="twitter" ng-model="mysite.portfolio.twitter" class="form-control">\n                    </div>\n                    <div class="form-group col-xs-12">\n                        <label for="xing">Xing</label>\n                        <input type="text" name="xing" id="xing" ng-model="mysite.portfolio.xing" class="form-control">\n                    </div>\n                    <div class="form-group col-xs-12">\n                        <button class="btn btn-primary  btn-lg" type="submit">Save</button>\n                    </div>\n                </form>\n            </div>\n        </div>\n    </div>\n\n\n</section>\n');
+  $templateCache.put('layout/header.html', '<nav id="mainNav" class="navbar navbar-default navbar-fixed-top navbar-custom">\n    <div class="container">\n        <!-- Brand and toggle get grouped for better mobile display -->\n        <div class="navbar-header page-scroll">\n            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">\n                <span class="sr-only">Toggle navigation</span> Menu <i class="fa fa-bars"></i>\n            </button>\n            <a class="navbar-brand" ui-sref="app.home">Portfolorian</a>\n        </div>\n\n        <!-- Collect the nav links, forms, and other content for toggling -->\n        <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">\n            <ul class="nav navbar-nav navbar-right">\n              <li>\n                  <a class="page-scroll btn btn-primary" ng-if="!$root.isAuthenticated" ng-click="home._authService.login()">Login</a>\n              </li>\n              <li>\n                  <a class="page-scroll" ui-sref="app.portfolio" ng-if="$root.isAuthenticated">My Portfolio</a>\n              </li>\n              <li>\n                  <a class="page-scroll" ng-if="$root.isAuthenticated" ng-click="home._authService.logout()">Logout</a>\n              </li>\n            </ul>\n        </div>\n        <!-- /.navbar-collapse -->\n    </div>\n    <!-- /.container-fluid -->\n</nav>\n');
+  $templateCache.put('mysite/mysite.html', '<!-- Header -->\n<header>\n    <div class="container">\n        <div class="row">\n            <div class="col-lg-12">\n                <div class="intro-text">\n                    <span class="name">My Site configuration</span>\n                    <hr class="star-light">\n                </div>\n            </div>\n        </div>\n    </div>\n</header>\n<section id="portfolio">\n    <div class="container">\n        <div class="row">\n            <div class="col-md-12">\n                <form name="portfolioForm" ng-submit="portfolio.save()">\n                    <div class="row">\n                        <div class="col-md-12 text-center">\n                            <h2>Motto</h2>\n                            <hr class="star-primary">\n                        </div>\n                        <div class="form-group col-xs-12">\n                            <textarea name="motto" ng-model="portfolio.portfolio.motto" rows="2" class="form-control" placeholder="Motto"></textarea>\n                        </div>\n                    </div>\n                    <div class="row">\n                        <div class="col-md-12">\n                            <div class="col-md-12 text-center">\n                                <h2>About You</h2>\n                                <hr class="star-primary">\n                            </div>\n                            <div class="form-group col-xs-12">\n                                <textarea class="form-control" ng-model="portfolio.portfolio.about" placeholder="About you"></textarea>\n                            </div>\n                        </div>\n                    </div>\n                    <div class="row">\n                        <div class="col-md-12">\n                            <div class="col-md-12 text-center">\n                                <h2>Contact</h2>\n                                <hr class="star-primary">\n                            </div>\n                            <div class="form-group col-xs-12">\n                                <label for="firstname">Firstname</label>\n                                <input type="text" name="firstname" ng-model="portfolio.portfolio.firstname" id="firstname" class="form-control">\n                            </div>\n                            <div class="form-group col-xs-12">\n                                <label for="lastname">Lastname</label>\n                                <input type="text" name="lastname" id="lastname" ng-model="portfolio.portfolio.lastname" class="form-control">\n                            </div>\n                            <div class="form-group col-xs-12">\n                                <label for="phhone">Phone</label>\n                                <input type="phone" name="phone" ng-model="portfolio.portfolio.phone" id="phone" class="form-control">\n                            </div>\n                            <div class="form-group col-xs-12">\n                                <label for="email">E-Mail</label>\n                                <input type="email" name="email" id="email" ng-model="portfolio.portfolio.email" class="form-control">\n                            </div>\n                        </div>\n                    </div>\n\n                    <div class="row">\n                        <div class="col-md-12">\n                            <div class="col-md-12 text-center">\n                                <h2>Projects</h2>\n                                <hr class="star-primary">\n                            </div>\n                            <div class="callout-primary" ng-repeat="project in portfolio.portfolio.projects">\n                                <h4>{{project.title}}</h4>\n                                <p>{{project.description}}</p>\n                            </div>\n                            <div class="col-md-12 text-center" ng-show="!portfolio.newproject">\n                                <div class="form-group">\n                                    <button class="btn btn-primary  btn-lg" ng-click="portfolio.newproject = {}">Add Project</button>\n                                </div>\n                            </div>\n                            <div class="col-md-12" ng-show="portfolio.newproject">\n                                <div class="form group col-xs-12">\n                                    <label for="projectTitle">Title</label>\n                                    <input type="text" name="projectTitle" ng-model="portfolio.newproject.title" id="projectTitle" class="form-control">\n                                </div>\n                                <div class="form group col-xs-12">\n                                    <label for="projectDescription">Description</label>\n                                    <textarea class="form-control" ng-model="portfolio.portfolio.about" id="projectDescription"></textarea>\n                                </div>\n                                <div class="form-group">\n                                    <button class="btn btn-primary btn-lg" ng-click="portfolio.portfolio.projects.push(portfolio.newproject); portfolio.newproject = null">Save</button>\n                                    <button class="btn btn-default btn-lg" ng-click="portfolio.newproject = null">Cancel</button>\n                                </div>\n                            </div>\n                        </div>\n                    </div>\n                    <div class="row">\n                        <div class="col-md-12">\n                            <div class="col-md-12 text-center">\n                                <h2>Social</h2>\n                                <hr class="star-primary">\n                            </div>\n                            <div class="form group col-xs-12">\n                                <label for="facebook">Facebook</label>\n                                <input type="text" name="facebook" ng-model="portfolio.portfolio.facebook" id="facebook" class="form-control">\n                            </div>\n                            <div class="form-group col-xs-12">\n                                <label for="twitter">Twitter</label>\n                                <input type="text" name="twitter" id="twitter" ng-model="portfolio.portfolio.twitter" class="form-control">\n                            </div>\n                            <div class="form-group col-xs-12">\n                                <label for="xing">Xing</label>\n                                <input type="text" name="xing" id="xing" ng-model="portfolio.portfolio.xing" class="form-control">\n                            </div>\n                        </div>\n                    </div>\n                    <div class="row">\n                        <div class="col-md-12">\n                            <div class="form-group col-xs-12">\n                                <button class="btn btn-primary  btn-lg" type="submit">Save</button>\n                            </div>\n                        </div>\n                    </div>\n                </form>\n            </div>\n        </div>\n    </div>\n\n\n</section>\n');
+  $templateCache.put('portfolio/portfolio.html', '<!-- Header -->\n<header>\n    <div class="container">\n        <div class="row">\n            <div class="col-lg-12">\n                <div class="intro-text">\n                    <span class="name">Portfolio configuration</span>\n                    <hr class="star-light">\n                    <span class="skills" ng-if="portfolioView.portfolio._id">\n                      {{portfolioView.getUrl()}}\n                       <button type="button" class="btn btn-default" clipboard ng-attr-text="portfolioView.getUrl()" aria-label="Left Align">\n                              <span class="fa fa-clipboard fa-2x" aria-hidden="true"></span>\n                    </button>\n                    </span>\n                </div>\n            </div>\n        </div>\n    </div>\n</header>\n<section id="portfolio">\n    <div class="container">\n        <div class="row">\n            <div class="col-md-12">\n                <form name="portfolioForm" ng-submit="portfolioView.save()">\n                    <div class="row">\n                        <div class="col-md-12">\n                            <div class="col-md-12 text-center">\n                                <h2>Motto</h2>\n                                <hr class="star-primary">\n                            </div>\n                            <div class="form-group col-xs-12">\n                                <textarea name="motto" ng-model="portfolioView.portfolio.motto" rows="2" class="form-control" placeholder="Motto"></textarea>\n                            </div>\n                        </div>\n                    </div>\n                    <div class="row">\n                        <div class="col-md-12">\n                            <div class="col-md-12 text-center">\n                                <h2>About You</h2>\n                                <hr class="star-primary">\n                            </div>\n                            <div class="form-group col-xs-12">\n                                <textarea class="form-control" ng-model="portfolioView.portfolio.about" placeholder="About you"></textarea>\n                            </div>\n                        </div>\n                    </div>\n                    <div class="row">\n                        <div class="col-md-12">\n                            <div class="col-md-12 text-center">\n                                <h2>Contact</h2>\n                                <hr class="star-primary">\n                            </div>\n                            <div class="form-group col-xs-12">\n                                <label for="firstname">Firstname</label>\n                                <input type="text" name="firstname" ng-model="portfolioView.portfolio.firstname" id="firstname" class="form-control">\n                            </div>\n                            <div class="form-group col-xs-12">\n                                <label for="lastname">Lastname</label>\n                                <input type="text" name="lastname" id="lastname" ng-model="portfolioView.portfolio.lastname" class="form-control">\n                            </div>\n                            <div class="form-group col-xs-12">\n                                <label for="phhone">Phone</label>\n                                <input type="phone" name="phone" ng-model="portfolioView.portfolio.phone" id="phone" class="form-control">\n                            </div>\n                            <div class="form-group col-xs-12">\n                                <label for="email">E-Mail</label>\n                                <input type="email" name="email" id="email" ng-model="portfolioView.portfolio.email" class="form-control">\n                            </div>\n                        </div>\n                    </div>\n\n                    <div class="row">\n                        <div class="col-md-12">\n                            <div class="row">\n                                <div class="col-md-12 text-center">\n                                    <h2>Projects</h2>\n                                    <hr class="star-primary">\n                                </div>\n                            </div>\n                            <div class="row" ng-repeat="project in portfolioView.portfolio.projects">\n                                <div class="col-md-12">\n                                    <div class="callout" class="callout" ng-class-even="\'callout-right\'" ng-class-odd="\'callout-left\'">\n                                        <h4>{{project.title}}</h4>\n                                        <p>{{project.description}}</p>\n                                    </div>\n                                </div>\n                            </div>\n                            <div class="row margin-top">\n                                <div class="col-md-12 text-center" ng-show="!portfolioView.portfolio.newproject">\n                                    <div class="form-group">\n                                        <button class="btn btn-primary  btn-lg" type="button" ng-click="portfolioView.newproject = {}">Add Project</button>\n                                    </div>\n                                </div>\n                                <div class="col-md-12" ng-show="portfolioView.newproject">\n                                    <div class="row">\n                                        <div class="form group col-xs-12">\n                                            <label for="projectTitle">Title</label>\n                                            <input type="text" name="projectTitle" ng-model="portfolioView.newproject.title" id="projectTitle" class="form-control">\n                                        </div>\n                                    </div>\n                                    <div class="row">\n                                        <div class="form group col-xs-12">\n                                            <label for="projectDescription">Description</label>\n                                            <textarea class="form-control" ng-model="portfolioView.newproject.description" id="projectDescription"></textarea>\n                                        </div>\n                                    </div>\n                                    <div class="row margin-top">\n                                        <div class="form-group col-md-12 text-center">\n                                            <button class="btn btn-primary btn-lg" type="button" ng-click="portfolioView.portfolio.projects.push(portfolioView.newproject); portfolioView.newproject = null">Save</button>\n                                            <button class="btn btn-default btn-lg" type="button" ng-click="portfolioView.newproject = null">Cancel</button>\n                                        </div>\n                                    </div>\n                                </div>\n                            </div>\n                        </div>\n                    </div>\n            </div>\n            <div class="row">\n                <div class="col-md-12">\n                    <div class="col-md-12 text-center">\n                        <h2>Social</h2>\n                        <hr class="star-primary">\n                    </div>\n                    <div class="form group col-xs-12">\n                        <label for="facebook">Facebook</label>\n                        <input type="text" name="facebook" ng-model="portfolioView.portfolio.facebook" id="facebook" class="form-control">\n                    </div>\n                    <div class="form-group col-xs-12">\n                        <label for="twitter">Twitter</label>\n                        <input type="text" name="twitter" id="twitter" ng-model="portfolioView.portfolio.twitter" class="form-control">\n                    </div>\n                    <div class="form-group col-xs-12">\n                        <label for="xing">Xing</label>\n                        <input type="text" name="xing" id="xing" ng-model="portfolioView.portfolio.xing" class="form-control">\n                    </div>\n                </div>\n            </div>\n            <div class="row">\n                <div class="col-md-12">\n                    <div class="form-group col-xs-12">\n                        <button class="btn btn-primary  btn-lg" ng-click="portfolioView.save()" type="submit">Save</button>\n                    </div>\n                </div>\n            </div>\n\n            </form>\n        </div>\n    </div>\n    </div>\n\n\n</section>\n');
 }]);
 
-},{}],18:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 'use strict';
 
 HomeConfig.$inject = ["$stateProvider"];
@@ -50192,7 +50279,7 @@ function HomeConfig($stateProvider) {
 
 exports.default = HomeConfig;
 
-},{}],19:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -50212,7 +50299,7 @@ HomeCtrl.$inject = ["$log"];
 
 exports.default = HomeCtrl;
 
-},{}],20:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -50241,7 +50328,7 @@ homeModule.controller('HomeCtrl', _home4.default);
 
 exports.default = homeModule;
 
-},{"./home.config":18,"./home.controller":19,"angular":10}],21:[function(require,module,exports){
+},{"./home.config":19,"./home.controller":20,"angular":11}],22:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -50268,7 +50355,7 @@ var AppHeader = {
 
 exports.default = AppHeader;
 
-},{}],22:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -50291,7 +50378,7 @@ layoutModule.component('appHeader', _header2.default);
 
 exports.default = layoutModule;
 
-},{"./header.component":21,"angular":10}],23:[function(require,module,exports){
+},{"./header.component":22,"angular":11}],24:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -50302,47 +50389,47 @@ var _angular = require('angular');
 
 var _angular2 = _interopRequireDefault(_angular);
 
-var _mysite = require('./mysite.config');
+var _portfolio = require('./portfolio.config');
 
-var _mysite2 = _interopRequireDefault(_mysite);
+var _portfolio2 = _interopRequireDefault(_portfolio);
 
-var _mysite3 = require('./mysite.controller');
+var _portfolio3 = require('./portfolio.controller');
 
-var _mysite4 = _interopRequireDefault(_mysite3);
+var _portfolio4 = _interopRequireDefault(_portfolio3);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-var MySiteModule = _angular2.default.module('app.mysite', []);
+var portfolioModule = _angular2.default.module('app.portfolio', []);
 
-MySiteModule.config(_mysite2.default);
+portfolioModule.config(_portfolio2.default);
 
-MySiteModule.controller('MySiteCtrl', _mysite4.default);
+portfolioModule.controller('portfolioCtrl', _portfolio4.default);
 
-exports.default = MySiteModule;
+exports.default = portfolioModule;
 
-},{"./mysite.config":24,"./mysite.controller":25,"angular":10}],24:[function(require,module,exports){
+},{"./portfolio.config":25,"./portfolio.controller":26,"angular":11}],25:[function(require,module,exports){
 'use strict';
 
-MySiteConfig.$inject = ["$stateProvider"];
+portfolioConfig.$inject = ["$stateProvider"];
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-function MySiteConfig($stateProvider) {
+function portfolioConfig($stateProvider) {
     'ngInject';
 
-    $stateProvider.state('app.mysite', {
-        url: '/mysite',
-        controller: 'MySiteCtrl',
-        controllerAs: 'mysite',
-        templateUrl: 'mysite/mysite.html',
+    $stateProvider.state('app.portfolio', {
+        url: '/portfolio',
+        controller: 'portfolioCtrl',
+        controllerAs: 'portfolioView',
+        templateUrl: 'portfolio/portfolio.html',
         title: 'My Site'
 
     });
 }
 
-exports.default = MySiteConfig;
+exports.default = portfolioConfig;
 
-},{}],25:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -50353,37 +50440,63 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var MySiteCtrl = function () {
-    MySiteCtrl.$inject = ["PortfolioService", "$log"];
-    function MySiteCtrl(PortfolioService, $log) {
+var portfolioCtrl = function () {
+    portfolioCtrl.$inject = ["AppConstants", "PortfolioService", "$log", "store"];
+    function portfolioCtrl(AppConstants, PortfolioService, $log, store) {
         'ngInject';
 
-        _classCallCheck(this, MySiteCtrl);
+        _classCallCheck(this, portfolioCtrl);
 
         this._PortfolioService = PortfolioService;
-        this.portfolio = {};
+        this._AppConstants = AppConstants;
         this._$log = $log;
+        this.profile = store.get(AppConstants.store_profile);
+        //initially set the userid
+        this.getByUser();
     }
 
-    _createClass(MySiteCtrl, [{
-        key: 'save',
-        value: function save() {
+    _createClass(portfolioCtrl, [{
+        key: 'getByUser',
+        value: function getByUser() {
             var _this = this;
 
-            this._PortfolioService.add(this.portfolio).success(function (response) {
-                console.log(response);
+            this._PortfolioService.getByUser(this.profile.user_id).success(function (response) {
+                if (response) {
+                    _this.portfolio = response;
+                } else {
+                    _this.portfolio = {};
+                    _this.portfolio.projects = [];
+                    _this.portfolio.userid = _this.profile.user_id;
+                }
             }).error(function (err) {
                 _this._$log.error(err);
             });
         }
+    }, {
+        key: 'getUrl',
+        value: function getUrl() {
+            return this._AppConstants.portfoliourl + this.portfolio._id;
+        }
+    }, {
+        key: 'save',
+        value: function save() {
+            var _this2 = this;
+
+            this._PortfolioService.add(this.portfolio).success(function (response) {
+                console.log(response);
+                _this2.portfolio = response;
+            }).error(function (err) {
+                _this2._$log.error(err);
+            });
+        }
     }]);
 
-    return MySiteCtrl;
+    return portfolioCtrl;
 }();
 
-exports.default = MySiteCtrl;
+exports.default = portfolioCtrl;
 
-},{}],26:[function(require,module,exports){
+},{}],27:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -50437,7 +50550,7 @@ var AuthService = function () {
                         _this._$log.error(error);
                     }
                     _this._store.set(_this._AppConstants.store_profile, profile);
-                    _this._$location.path('/Admin/MySite');
+                    _this._$location.path('/Admin/portfolio');
                 });
             });
         }
@@ -50448,7 +50561,7 @@ var AuthService = function () {
 
 exports.default = AuthService;
 
-},{}],27:[function(require,module,exports){
+},{}],28:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -50475,7 +50588,7 @@ servicesModule.service('PortfolioService', _portfolio2.default);
 
 exports.default = servicesModule;
 
-},{"./auth.service":26,"./portfolio.service":28,"angular":10}],28:[function(require,module,exports){
+},{"./auth.service":27,"./portfolio.service":29,"angular":11}],29:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -50515,6 +50628,11 @@ var PortfolioService = function () {
         value: function add(portfolio) {
             return this._$http.post(this._AppConstants.apiUrl + 'portfolio', portfolio);
         }
+    }, {
+        key: 'getByUser',
+        value: function getByUser(userid) {
+            return this._$http.get(this._AppConstants.apiUrl + 'portfolio/findByUser/' + userid);
+        }
     }]);
 
     return PortfolioService;
@@ -50522,4 +50640,4 @@ var PortfolioService = function () {
 
 exports.default = PortfolioService;
 
-},{}]},{},[13]);
+},{}]},{},[14]);

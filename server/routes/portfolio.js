@@ -11,10 +11,10 @@ router.param('portfolio', function(req, res, next, id) {
     query.exec(function(err, portfolio) {
         if (err) {
             return next(err)
-                loggerService.log('error',err);
+            loggerService.log('error', err);
         }
         if (!portfolio) {
-           loggerService.log('info','Portfolio mit der ID ' + id + ' konnte nicht gefunden werden');
+            loggerService.log('info', 'Portfolio mit der ID ' + id + ' konnte nicht gefunden werden');
             return next(new Error('cant find portfolio'));
 
         }
@@ -24,11 +24,31 @@ router.param('portfolio', function(req, res, next, id) {
     })
 })
 
+router.param('userid', function(req, res, next, userid) {
+    var query = Portfolio.findOne({
+        'userid': userid
+    });
+    query.exec(function(err, portfolio) {
+        if (!portfolio) {
+            req.portfolio = null;
+        } else {
+            req.portfolio = portfolio;
+        }
+
+        return next();
+    })
+
+})
+
 
 router.get('/:portfolio', function(req, res) {
     res.json(req.portfolio);
 });
 
+router.get('/findbyUser/:userid', function(req, res) {
+    res.json(req.portfolio);
+
+})
 
 
 router.post('/', authCheck, function(req, res, next) {
@@ -36,7 +56,7 @@ router.post('/', authCheck, function(req, res, next) {
     portfolio.save(function(err, portfolio) {
         if (err) {
             return next(err);
-            loggerService.log('error',err);
+            loggerService.log('error', err);
         };
         res.json(portfolio);
     })

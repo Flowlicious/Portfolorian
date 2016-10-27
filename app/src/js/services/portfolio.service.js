@@ -19,5 +19,8 @@ export default class PortfolioService {
     add(portfolio) {
         return this._$http.post(this._AppConstants.apiUrl + 'portfolio', portfolio);
     }
+    getByUser(userid) {
+        return this._$http.get(this._AppConstants.apiUrl + 'portfolio/findByUser/' + userid);
+    }
 
 }

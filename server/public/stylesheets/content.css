@@ -8293,6 +8293,36 @@ button.close {
 .h100 {
   height: 100%;
 }
+
+.margin-top {
+  margin-top: 20px;
+}
+
+.callout {
+  padding: 20px;
+  margin-top: 20px;
+  border-radius: 3px;
+  border: 1px solid #eee;
+}
+
+.callout-left {
+  border-left-width: 5px;
+  border-left-color: #18bc9c;
+}
+
+.callout-right {
+  border-right-width: 5px;
+  border-right-color: #18bc9c;
+}
+
+.callout h4 {
+  margin-top: 0;
+  margin-bottom: 5px;
+}
+
+.callout h4 {
+  color: #18bc9c;
+}
 /*!
  * Start Bootstrap - Freelancer v3.3.7+1 (http://startbootstrap.com/template-overviews/freelancer)
  * Copyright 2013-2016 Start Bootstrap

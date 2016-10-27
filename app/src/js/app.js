@@ -9,13 +9,13 @@ import 'angular-ui-router';
 import 'angular-jwt';
 import 'angular-storage';
 import 'angular-lock/dist/angular-lock';
-import 'angular-loggly-logger'
+import 'angular-loggly-logger';
+import 'angular-clipboard';
 import './layout';
 import './home';
 import './services';
 import './config/app.templates';
-import './mysite';
-//import './admin.mysite';
+import './portfolio';
 
 import 'bootstrap/dist/js/bootstrap.js';
 
@@ -26,14 +26,15 @@ const requires = [
     'angular-storage',
     'angular-jwt',
     'logglyLogger',
+    'angular-clipboard',
     'ui.router',
     'templates',
     'app.layout',
     'app.home',
     'app.services',
-    'app.mysite',
+    'app.portfolio',
 
-    //'app.admin.mysite'
+    //'app.admin.portfolio'
 ]
 
 

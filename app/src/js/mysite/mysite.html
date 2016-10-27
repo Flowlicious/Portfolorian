@@ -11,64 +11,113 @@
         </div>
     </div>
 </header>
-<section id="mysite">
+<section id="portfolio">
     <div class="container">
         <div class="row">
             <div class="col-md-12">
-                <form name="mysiteForm" ng-submit="mysite.save()">
-                    <div class="col-md-12 text-center">
-                        <h2>Motto</h2>
-                        <hr class="star-primary">
+                <form name="portfolioForm" ng-submit="portfolio.save()">
+                    <div class="row">
+                        <div class="col-md-12 text-center">
+                            <h2>Motto</h2>
+                            <hr class="star-primary">
+                        </div>
+                        <div class="form-group col-xs-12">
+                            <textarea name="motto" ng-model="portfolio.portfolio.motto" rows="2" class="form-control" placeholder="Motto"></textarea>
+                        </div>
                     </div>
-                    <div class="form-group col-xs-12">
-                        <textarea name="motto" ng-model="mysite.portfolio.motto" rows="2" class="form-control" placeholder="Motto"></textarea>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="col-md-12 text-center">
+                                <h2>About You</h2>
+                                <hr class="star-primary">
+                            </div>
+                            <div class="form-group col-xs-12">
+                                <textarea class="form-control" ng-model="portfolio.portfolio.about" placeholder="About you"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="col-md-12 text-center">
+                                <h2>Contact</h2>
+                                <hr class="star-primary">
+                            </div>
+                            <div class="form-group col-xs-12">
+                                <label for="firstname">Firstname</label>
+                                <input type="text" name="firstname" ng-model="portfolio.portfolio.firstname" id="firstname" class="form-control">
+                            </div>
+                            <div class="form-group col-xs-12">
+                                <label for="lastname">Lastname</label>
+                                <input type="text" name="lastname" id="lastname" ng-model="portfolio.portfolio.lastname" class="form-control">
+                            </div>
+                            <div class="form-group col-xs-12">
+                                <label for="phhone">Phone</label>
+                                <input type="phone" name="phone" ng-model="portfolio.portfolio.phone" id="phone" class="form-control">
+                            </div>
+                            <div class="form-group col-xs-12">
+                                <label for="email">E-Mail</label>
+                                <input type="email" name="email" id="email" ng-model="portfolio.portfolio.email" class="form-control">
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="col-md-12 text-center">
-                        <h2>About You</h2>
-                        <hr class="star-primary">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="col-md-12 text-center">
+                                <h2>Projects</h2>
+                                <hr class="star-primary">
+                            </div>
+                            <div class="callout-primary" ng-repeat="project in portfolio.portfolio.projects">
+                                <h4>{{project.title}}</h4>
+                                <p>{{project.description}}</p>
+                            </div>
+                            <div class="col-md-12 text-center" ng-show="!portfolio.newproject">
+                                <div class="form-group">
+                                    <button class="btn btn-primary  btn-lg" ng-click="portfolio.newproject = {}">Add Project</button>
+                                </div>
+                            </div>
+                            <div class="col-md-12" ng-show="portfolio.newproject">
+                                <div class="form group col-xs-12">
+                                    <label for="projectTitle">Title</label>
+                                    <input type="text" name="projectTitle" ng-model="portfolio.newproject.title" id="projectTitle" class="form-control">
+                                </div>
+                                <div class="form group col-xs-12">
+                                    <label for="projectDescription">Description</label>
+                                    <textarea class="form-control" ng-model="portfolio.portfolio.about" id="projectDescription"></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <button class="btn btn-primary btn-lg" ng-click="portfolio.portfolio.projects.push(portfolio.newproject); portfolio.newproject = null">Save</button>
+                                    <button class="btn btn-default btn-lg" ng-click="portfolio.newproject = null">Cancel</button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="form-group col-xs-12">
-                        <textarea class="form-control" ng-model="mysite.portfolio.about" placeholder="About you"></textarea>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="col-md-12 text-center">
+                                <h2>Social</h2>
+                                <hr class="star-primary">
+                            </div>
+                            <div class="form group col-xs-12">
+                                <label for="facebook">Facebook</label>
+                                <input type="text" name="facebook" ng-model="portfolio.portfolio.facebook" id="facebook" class="form-control">
+                            </div>
+                            <div class="form-group col-xs-12">
+                                <label for="twitter">Twitter</label>
+                                <input type="text" name="twitter" id="twitter" ng-model="portfolio.portfolio.twitter" class="form-control">
+                            </div>
+                            <div class="form-group col-xs-12">
+                                <label for="xing">Xing</label>
+                                <input type="text" name="xing" id="xing" ng-model="portfolio.portfolio.xing" class="form-control">
+                            </div>
+                        </div>
                     </div>
-                    <div class="col-md-12 text-center">
-                        <h2>Contact</h2>
-                        <hr class="star-primary">
-                    </div>
-                    <div class="form-group col-xs-12">
-                        <label for="firstname">Firstname</label>
-                        <input type="text" name="firstname" ng-model="mysite.portfolio.firstname" id="firstname" class="form-control">
-                    </div>
-                    <div class="form-group col-xs-12">
-                        <label for="lastname">Lastname</label>
-                        <input type="text" name="lastname" id="lastname" ng-model="mysite.portfolio.lastname" class="form-control">
-                    </div>
-                    <div class="form-group col-xs-12">
-                        <label for="phhone">Phone</label>
-                        <input type="phone" name="phone" ng-model="mysite.portfolio.phone" id="phone" class="form-control">
-                    </div>
-                    <div class="form-group col-xs-12">
-                        <label for="email">E-Mail</label>
-                        <input type="email" name="email" id="email" ng-model="mysite.portfolio.email" class="form-control">
-                    </div>
-                    <div class="col-md-12 text-center">
-                        <h2>Social</h2>
-                        <hr class="star-primary">
-                    </div>
-                    <div class="form group col-xs-12">
-                        <label for="facebook">Facebook</label>
-                        <input type="text" name="facebook" ng-model="mysite.portfolio.facebook" id="facebook" class="form-control">
-                    </div>
-                    <div class="form-group col-xs-12">
-                        <label for="twitter">Twitter</label>
-                        <input type="text" name="twitter" id="twitter" ng-model="mysite.portfolio.twitter" class="form-control">
-                    </div>
-                    <div class="form-group col-xs-12">
-                        <label for="xing">Xing</label>
-                        <input type="text" name="xing" id="xing" ng-model="mysite.portfolio.xing" class="form-control">
-                    </div>
-                    <div class="form-group col-xs-12">
-                        <button class="btn btn-primary  btn-lg" type="submit">Save</button>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group col-xs-12">
+                                <button class="btn btn-primary  btn-lg" type="submit">Save</button>
+                            </div>
+                        </div>
                     </div>
                 </form>
             </div>

@@ -9,7 +9,6 @@ var loggerService = require('./bin/loggerService');
 
 var mongoose = require('mongoose');
 require('./models/portfolio');
-require('./models/project');
 
 mongoose.Promise = global.Promise;
 mongoose.connect('mongodb://localhost/portfolorian');
