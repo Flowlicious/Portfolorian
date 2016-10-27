@@ -3,7 +3,7 @@ function portfolioConfig($stateProvider) {
 
     $stateProvider
         .state('app.portfolio', {
-            url: '/portfolio',
+            url: '/portfolio/',
             controller: 'portfolioCtrl',
             controllerAs: 'portfolioView',
             templateUrl: 'portfolio/portfolio.html',

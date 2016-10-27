@@ -53,13 +53,29 @@ router.get('/findbyUser/:userid', function(req, res) {
 
 router.post('/', authCheck, function(req, res, next) {
     var portfolio = new Portfolio(req.body);
-    portfolio.save(function(err, portfolio) {
-        if (err) {
-            return next(err);
-            loggerService.log('error', err);
-        };
-        res.json(portfolio);
-    })
+    if (portfolio._id) {
+        Portfolio.findOneAndUpdate({
+                _id: portfolio._id
+            },
+            portfolio, {
+                new: true
+            },
+            function(err, portfolio) {
+                if (err) {
+                    return next(err);
+                    loggerService.log('error', err);
+                };
+                res.json(portfolio);
+            })
+    } else {
+        portfolio.save(function(err, portfolio) {
+            if (err) {
+                return next(err);
+                loggerService.log('error', err);
+            };
+            res.json(portfolio);
+        })
+    }
 });
 
 
