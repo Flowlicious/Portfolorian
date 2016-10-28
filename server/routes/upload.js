@@ -13,26 +13,11 @@ var storage = multer.diskStorage({ //multers disk storage settings
         cb(null, file.fieldname + '-' + datetimestamp + '.' + file.originalname.split('.')[file.originalname.split('.').length - 1])
     }
 });
-var upload = multer({ //multer settings
+var upload = multer({
     storage: storage
 }).single('file');
 
 router.post('/', upload,function(req, res) {
-    // upload(req, res, function(err) {
-    //     if (err) {
-    //         loggerService.log('error', err);
-    //         res.json({
-    //             error_code: 1,
-    //             err_desc: err
-    //         });
-    //         return;
-    //     }
-    //     res.json({
-    //         error_code: 0,
-    //         err_desc: null,
-    //         file: req.file,
-    //     });
-    // })
     res.json(req.file.filename);
 })
 

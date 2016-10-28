@@ -8323,6 +8323,35 @@ button.close {
 .callout h4 {
   color: #18bc9c;
 }
+
+.img-responsive {
+  width: 256px;
+}
+
+.roundBorder {
+  border-radius: 50%;
+}
+
+#hide input[type=file] {
+  display: none;
+  margin: 10px;
+}
+
+#hide input[type=file] + label {
+  display: inline-block;
+  margin: 20px;
+  padding: 4px 32px;
+  background-color: #FFFFFF;
+  border: solid 1px #666F77;
+  border-radius: 6px;
+  color: #666F77;
+}
+
+#hide input[type=file]:active + label {
+  background-image: none;
+  background-color: #2D6C7A;
+  color: #FFFFFF;
+}
 /*!
  * Start Bootstrap - Freelancer v3.3.7+1 (http://startbootstrap.com/template-overviews/freelancer)
  * Copyright 2013-2016 Start Bootstrap

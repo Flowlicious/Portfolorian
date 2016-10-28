@@ -50152,7 +50152,7 @@ _angular2.default.bootstrap(document, ['app'], {
     strictDi: true
 });
 
-},{"./config/app.config":16,"./config/app.constants":17,"./config/app.run":18,"./config/app.templates":19,"./home":22,"./layout":24,"./portfolio":25,"./services":29,"angular":12,"angular-clipboard":1,"angular-file-upload":2,"angular-jwt":4,"angular-lock/dist/angular-lock":5,"angular-loggly-logger":7,"angular-storage":9,"angular-ui-router":10,"bootstrap/dist/js/bootstrap.js":13,"jquery":14}],16:[function(require,module,exports){
+},{"./config/app.config":16,"./config/app.constants":17,"./config/app.run":18,"./config/app.templates":19,"./home":22,"./layout":24,"./portfolio":25,"./services":30,"angular":12,"angular-clipboard":1,"angular-file-upload":2,"angular-jwt":4,"angular-lock/dist/angular-lock":5,"angular-loggly-logger":7,"angular-storage":9,"angular-ui-router":10,"bootstrap/dist/js/bootstrap.js":13,"jquery":14}],16:[function(require,module,exports){
 'use strict';
 
 AppConfig.$inject = ["$httpProvider", "$stateProvider", "$locationProvider", "$urlRouterProvider", "lockProvider", "$provide", "jwtOptionsProvider", "jwtInterceptorProvider", "AppConstants", "LogglyLoggerProvider"];
@@ -50223,7 +50223,8 @@ var AppConstants = {
     store_profile: 'profile',
     apiUrl: 'http://localhost:3000/api/',
     logglyToken: '985eff94-bc71-4d53-a6b0-bb70a4178a3c',
-    portfoliourl: 'http://localhost:3000/#/'
+    portfoliourl: 'http://localhost:3000/#/',
+    pictureUrl: 'http://localhost:3000/profileImages/'
 };
 
 exports.default = AppConstants;
@@ -50262,9 +50263,9 @@ exports.default = AppRun;
 
 angular.module('templates', []).run(['$templateCache', function ($templateCache) {
   $templateCache.put('home/home.html', '<!-- Header -->\r\n<header>\r\n    <div class="container">\r\n        <div class="row">\r\n            <div class="col-lg-12">\r\n                <img class="img-responsive" src="img/profile.png" alt="">\r\n                <div class="intro-text">\r\n                    <span class="name">{{home.portfolio.firstname + " " + home.portfolio.lastname}}</span>\r\n                    <hr class="star-light">\r\n                    <span class="skills" {{home.portfolio.motto}}</span>\r\n                </div>\r\n            </div>\r\n        </div>\r\n    </div>\r\n</header>\r\n\r\n<!-- Portfolio Grid Section -->\r\n<section id="portfolio">\r\n    <div class="container">\r\n        <div class="row">\r\n            <div class="col-md-12 text-center">\r\n                <h2>Projects</h2>\r\n                <hr class="star-primary">\r\n            </div>\r\n        </div>\r\n        <div class="row" ng-repeat="project in home.portfolio.projects">\r\n            <div class="col-md-12">\r\n                <div class="callout" class="callout" ng-class-even="\'callout-right\'" ng-class-odd="\'callout-left\'">\r\n                    <h4>{{project.title}}</h4>\r\n                    <p>{{project.description}}</p>\r\n                </div>\r\n            </div>\r\n        </div>\r\n    </div>\r\n</section>\r\n\r\n<!-- About Section -->\r\n<section class="success" id="about">\r\n    <div class="container">\r\n        <div class="row">\r\n            <div class="col-lg-12 text-center">\r\n                <h2>About</h2>\r\n                <hr class="star-light">\r\n            </div>\r\n        </div>\r\n        <div class="row">\r\n            <div class="col-lg-8 col-lg-offset-2 text-center">\r\n                {{home.portfolio.about}}\r\n            </div>\r\n\r\n        </div>\r\n    </div>\r\n</section>\r\n\r\n<!-- Contact Section -->\r\n<section id="contact">\r\n    <div class="container">\r\n        <div class="row">\r\n            <div class="col-lg-12 text-center">\r\n                <h2>Contact Me</h2>\r\n                <hr class="star-primary">\r\n            </div>\r\n        </div>\r\n        <div class="row">\r\n            <div class="col-lg-8 col-lg-offset-2">\r\n                <form name="sentMessage" id="contactForm" novalidate>\r\n                    <div class="row control-group">\r\n                        <div class="form-group col-xs-12  controls">\r\n                            <label>Name</label>\r\n                            <p class="form-control-static">{{home.portfolio.firstname + " " + home.portfolio.lastname}}</p>\r\n                        </div>\r\n                    </div>\r\n                    <div class="row control-group">\r\n                        <div class="form-group col-xs-12  controls">\r\n                            <label>Email Address</label>\r\n                            <p class="form-control-static">{{home.portfolio.email}}</p>\r\n                        </div>\r\n                    </div>\r\n                    <div class="row control-group">\r\n                        <div class="form-group col-xs-12 ">\r\n                            <label>Phone Number</label>\r\n                            <p class="form-control-static">{{home.portfolio.phone}}</p>\r\n                        </div>\r\n                    </div>\r\n                </form>\r\n            </div>\r\n        </div>\r\n    </div>\r\n</section>\r\n\r\n<!-- Footer -->\r\n<footer class="text-center">\r\n    <div class="footer-above">\r\n        <div class="container">\r\n            <div class="row">\r\n                <div class="footer-col col-md-6">\r\n                    <h3>Where you find me</h3>\r\n                    <ul class="list-inline">\r\n                        <li ng-if="home.portfolio.facebook">\r\n                            <a ng-href="home.portfolio.facebook" class="btn-social btn-outline"><i class="fa fa-fw fa-facebook"></i></a>\r\n                        </li>\r\n                        <li ng-if="home.portfolio.twitter">\r\n                            <a ng-href="home.portfolio.twitter" class="btn-social btn-outline"><i class="fa fa-fw fa-twitter"></i></a>\r\n                        </li>\r\n                        <li ng-if="home.portfolio.xing">\r\n                            <a ng-href="home.portfolio.xing" class="btn-social btn-outline"><i class="fa fa-fw fa-xing"></i></a>\r\n                        </li>\r\n                    </ul>\r\n                </div>\r\n                <div class="footer-col col-md-6">\r\n                    <h3>About Portfolorian</h3>\r\n                    <p>Portfolorian is a free service for creating your own small portfolio to show others how great you are <a href="todo">Log in</a> now to create your own </p>\r\n                </div>\r\n            </div>\r\n        </div>\r\n    </div>\r\n    <div class="footer-below">\r\n        <div class="container">\r\n            <div class="row">\r\n                <div class="col-lg-12">\r\n                    Copyright &copy; Your Website 2016\r\n                </div>\r\n            </div>\r\n        </div>\r\n    </div>\r\n</footer>\r\n\r\n<!-- Scroll to Top Button (Only visible on small and extra-small screen sizes) -->\r\n<div class="scroll-top page-scroll hidden-sm hidden-xs hidden-lg hidden-md">\r\n    <a class="btn btn-primary" href="#page-top">\r\n        <i class="fa fa-chevron-up"></i>\r\n    </a>\r\n</div>\r\n');
+  $templateCache.put('portfolio/portfolio.html', '<!-- Header -->\r\n<header>\r\n    <div class="container">\r\n        <div class="row">\r\n            <div class="col-md-12 text-center">\r\n                <h2>Profile Image</h2>\r\n                <hr class="star-light">\r\n                <img class="img-responsive" ng-show="!portfolioView.previewFile" ng-src="{{portfolioView.portfolio.picture}}" alt="">\r\n                <div ng-repeat="item in portfolioView._FileUploader.queue">\r\n                    <div ng-show="portfolioView._FileUploader.isHTML5" class="roundBorder" ng-thumb="{ file: item._file, height:256, width:256}"></div>\r\n                </div>\r\n                <img class="img-responsive" ng-thumb="{ file: portfolioView._FileUploader.queue[0]._file}">\r\n            </div>\r\n            <div id="hide">\r\n                <label class="hand-cursor btn btn-primary">\r\n    <input type="file" nv-file-select="" uploader="portfolioView._FileUploader" />\r\n    <span class="fa fa-camera"></span> Choose Picture\r\n    <span class="photo_text hidden-xs">Photo</span>\r\n     </label>\r\n            </div>\r\n\r\n\r\n            <button type="button" class="btn btn-success btn-s" ng-click="portfolioView._FileUploader.uploadAll()">\r\n                           <span class="glyphicon glyphicon-upload"></span> Upload all\r\n                       </button>\r\n\r\n        </div>\r\n        <div class="row">\r\n            <div class="col-lg-12">\r\n                <div class="intro-text">\r\n                    <span class="name">Portfolio configuration</span>\r\n                    <hr class="star-light">\r\n                    <span class="skills" ng-if="portfolioView.portfolio._id">\r\n                      {{portfolioView.getUrl()}}\r\n                       <button type="button" class="btn btn-default" clipboard ng-attr-text="portfolioView.getUrl()" aria-label="Left Align">\r\n                              <span class="fa fa-clipboard fa-2x" aria-hidden="true"></span>\r\n                    </button>\r\n                    </span>\r\n                </div>\r\n            </div>\r\n        </div>\r\n    </div>\r\n</header>\r\n<section id="portfolio">\r\n    <div class="container">\r\n        <div class="row">\r\n            <div class="col-md-12">\r\n                <form name="portfolioForm" ng-submit="portfolioView.save()">\r\n                    <div class="row">\r\n                        <div class="col-md-12">\r\n                            <div class="col-md-12 text-center">\r\n                                <h2>Motto</h2>\r\n                                <hr class="star-primary">\r\n                            </div>\r\n                            <div class="form-group col-xs-12">\r\n                                <textarea name="motto" ng-model="portfolioView.portfolio.motto" rows="2" class="form-control" placeholder="Motto"></textarea>\r\n                            </div>\r\n                        </div>\r\n                    </div>\r\n                    <div class="row">\r\n                        <div class="col-md-12">\r\n                            <div class="col-md-12 text-center">\r\n                                <h2>About You</h2>\r\n                                <hr class="star-primary">\r\n                            </div>\r\n                            <div class="form-group col-xs-12">\r\n                                <textarea class="form-control" ng-model="portfolioView.portfolio.about" placeholder="About you"></textarea>\r\n                            </div>\r\n                        </div>\r\n                    </div>\r\n                    <div class="row">\r\n                        <div class="col-md-12">\r\n                            <div class="col-md-12 text-center">\r\n                                <h2>Contact</h2>\r\n                                <hr class="star-primary">\r\n                            </div>\r\n                            <div class="form-group col-xs-12">\r\n                                <label for="firstname">Firstname</label>\r\n                                <input type="text" name="firstname" ng-model="portfolioView.portfolio.firstname" id="firstname" class="form-control">\r\n                            </div>\r\n                            <div class="form-group col-xs-12">\r\n                                <label for="lastname">Lastname</label>\r\n                                <input type="text" name="lastname" id="lastname" ng-model="portfolioView.portfolio.lastname" class="form-control">\r\n                            </div>\r\n                            <div class="form-group col-xs-12">\r\n                                <label for="phhone">Phone</label>\r\n                                <input type="phone" name="phone" ng-model="portfolioView.portfolio.phone" id="phone" class="form-control">\r\n                            </div>\r\n                            <div class="form-group col-xs-12">\r\n                                <label for="email">E-Mail</label>\r\n                                <input type="email" name="email" id="email" ng-model="portfolioView.portfolio.email" class="form-control">\r\n                            </div>\r\n                        </div>\r\n                    </div>\r\n\r\n                    <div class="row">\r\n                        <div class="col-md-12">\r\n                            <div class="row">\r\n                                <div class="col-md-12 text-center">\r\n                                    <h2>Projects</h2>\r\n                                    <hr class="star-primary">\r\n                                </div>\r\n                            </div>\r\n                            <div class="row" ng-repeat="project in portfolioView.portfolio.projects">\r\n                                <div class="col-md-12">\r\n                                    <div class="callout" class="callout" ng-class-even="\'callout-right\'" ng-class-odd="\'callout-left\'">\r\n                                        <h4>{{project.title}}</h4>\r\n                                        <p>{{project.description}}</p>\r\n                                    </div>\r\n                                </div>\r\n                            </div>\r\n                            <div class="row margin-top">\r\n                                <div class="col-md-12 text-center" ng-show="!portfolioView.portfolio.newproject">\r\n                                    <div class="form-group">\r\n                                        <button class="btn btn-primary  btn-lg" type="button" ng-click="portfolioView.newproject = {}">Add Project</button>\r\n                                    </div>\r\n                                </div>\r\n                                <div class="col-md-12" ng-show="portfolioView.newproject">\r\n                                    <div class="row">\r\n                                        <div class="form group col-xs-12">\r\n                                            <label for="projectTitle">Title</label>\r\n                                            <input type="text" name="projectTitle" ng-model="portfolioView.newproject.title" id="projectTitle" class="form-control">\r\n                                        </div>\r\n                                    </div>\r\n                                    <div class="row">\r\n                                        <div class="form group col-xs-12">\r\n                                            <label for="projectDescription">Description</label>\r\n                                            <textarea class="form-control" ng-model="portfolioView.newproject.description" id="projectDescription"></textarea>\r\n                                        </div>\r\n                                    </div>\r\n                                    <div class="row margin-top">\r\n                                        <div class="form-group col-md-12 text-center">\r\n                                            <button class="btn btn-primary btn-lg" type="button" ng-click="portfolioView.portfolio.projects.push(portfolioView.newproject); portfolioView.newproject = null">Save</button>\r\n                                            <button class="btn btn-default btn-lg" type="button" ng-click="portfolioView.newproject = null">Cancel</button>\r\n                                        </div>\r\n                                    </div>\r\n                                </div>\r\n                            </div>\r\n                        </div>\r\n                    </div>\r\n            </div>\r\n            <div class="row">\r\n                <div class="col-md-12">\r\n                    <div class="col-md-12 text-center">\r\n                        <h2>Social</h2>\r\n                        <hr class="star-primary">\r\n                    </div>\r\n                    <div class="form group col-xs-12">\r\n                        <label for="facebook">Facebook</label>\r\n                        <input type="text" name="facebook" ng-model="portfolioView.portfolio.facebook" id="facebook" class="form-control">\r\n                    </div>\r\n                    <div class="form-group col-xs-12">\r\n                        <label for="twitter">Twitter</label>\r\n                        <input type="text" name="twitter" id="twitter" ng-model="portfolioView.portfolio.twitter" class="form-control">\r\n                    </div>\r\n                    <div class="form-group col-xs-12">\r\n                        <label for="xing">Xing</label>\r\n                        <input type="text" name="xing" id="xing" ng-model="portfolioView.portfolio.xing" class="form-control">\r\n                    </div>\r\n                </div>\r\n            </div>\r\n            <div class="row">\r\n                <div class="col-md-12">\r\n                    <div class="form-group col-xs-12">\r\n                        <button class="btn btn-primary  btn-lg" ng-click="portfolioView.save()" type="submit">Save</button>\r\n                    </div>\r\n                </div>\r\n            </div>\r\n\r\n            </form>\r\n        </div>\r\n    </div>\r\n    </div>\r\n\r\n\r\n</section>\r\n');
   $templateCache.put('layout/app-view.html', '<app-header></app-header>\r\n<div ui-view class="w100 h100"></div>\r\n');
   $templateCache.put('layout/header.html', '<nav id="mainNav" class="navbar navbar-default navbar-fixed-top navbar-custom">\r\n    <div class="container">\r\n        <!-- Brand and toggle get grouped for better mobile display -->\r\n        <div class="navbar-header page-scroll">\r\n            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">\r\n                <span class="sr-only">Toggle navigation</span> Menu <i class="fa fa-bars"></i>\r\n            </button>\r\n            <a class="navbar-brand" ui-sref="app.home">Portfolorian</a>\r\n        </div>\r\n\r\n        <!-- Collect the nav links, forms, and other content for toggling -->\r\n        <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">\r\n            <ul class="nav navbar-nav navbar-right">\r\n              <li>\r\n                  <a class="page-scroll btn btn-primary" ng-if="!$root.isAuthenticated" ng-click="home._authService.login()">Login</a>\r\n              </li>\r\n              <li>\r\n                  <a class="page-scroll" ui-sref="app.portfolio" ng-if="$root.isAuthenticated">My Portfolio</a>\r\n              </li>\r\n              <li>\r\n                  <a class="page-scroll" ng-if="$root.isAuthenticated" ng-click="home._authService.logout()">Logout</a>\r\n              </li>\r\n            </ul>\r\n        </div>\r\n        <!-- /.navbar-collapse -->\r\n    </div>\r\n    <!-- /.container-fluid -->\r\n</nav>\r\n');
-  $templateCache.put('portfolio/portfolio.html', '<!-- Header -->\r\n<header>\r\n    <div class="container">\r\n        <div class="row">\r\n            <div class="col-md-12 text-center">\r\n                <h2>Profile Image</h2>\r\n                <hr class="star-primary">\r\n            </div>\r\n            <input type="file" nv-file-select="" uploader="portfolioView._FileUploader" /><br/>\r\n            <button type="button" class="btn btn-success btn-s" ng-click="portfolioView._FileUploader.uploadAll()">\r\n                           <span class="glyphicon glyphicon-upload"></span> Upload all\r\n                       </button>\r\n\r\n        </div>\r\n        <div class="row">\r\n            <div class="col-lg-12">\r\n                <div class="intro-text">\r\n                    <span class="name">Portfolio configuration</span>\r\n                    <hr class="star-light">\r\n                    <span class="skills" ng-if="portfolioView.portfolio._id">\r\n                      {{portfolioView.getUrl()}}\r\n                       <button type="button" class="btn btn-default" clipboard ng-attr-text="portfolioView.getUrl()" aria-label="Left Align">\r\n                              <span class="fa fa-clipboard fa-2x" aria-hidden="true"></span>\r\n                    </button>\r\n                    </span>\r\n                </div>\r\n            </div>\r\n        </div>\r\n    </div>\r\n</header>\r\n<section id="portfolio">\r\n    <div class="container">\r\n        <div class="row">\r\n            <div class="col-md-12">\r\n                <form name="portfolioForm" ng-submit="portfolioView.save()">\r\n                    <div class="row">\r\n                        <div class="col-md-12">\r\n                            <div class="col-md-12 text-center">\r\n                                <h2>Motto</h2>\r\n                                <hr class="star-primary">\r\n                            </div>\r\n                            <div class="form-group col-xs-12">\r\n                                <textarea name="motto" ng-model="portfolioView.portfolio.motto" rows="2" class="form-control" placeholder="Motto"></textarea>\r\n                            </div>\r\n                        </div>\r\n                    </div>\r\n                    <div class="row">\r\n                        <div class="col-md-12">\r\n                            <div class="col-md-12 text-center">\r\n                                <h2>About You</h2>\r\n                                <hr class="star-primary">\r\n                            </div>\r\n                            <div class="form-group col-xs-12">\r\n                                <textarea class="form-control" ng-model="portfolioView.portfolio.about" placeholder="About you"></textarea>\r\n                            </div>\r\n                        </div>\r\n                    </div>\r\n                    <div class="row">\r\n                        <div class="col-md-12">\r\n                            <div class="col-md-12 text-center">\r\n                                <h2>Contact</h2>\r\n                                <hr class="star-primary">\r\n                            </div>\r\n                            <div class="form-group col-xs-12">\r\n                                <label for="firstname">Firstname</label>\r\n                                <input type="text" name="firstname" ng-model="portfolioView.portfolio.firstname" id="firstname" class="form-control">\r\n                            </div>\r\n                            <div class="form-group col-xs-12">\r\n                                <label for="lastname">Lastname</label>\r\n                                <input type="text" name="lastname" id="lastname" ng-model="portfolioView.portfolio.lastname" class="form-control">\r\n                            </div>\r\n                            <div class="form-group col-xs-12">\r\n                                <label for="phhone">Phone</label>\r\n                                <input type="phone" name="phone" ng-model="portfolioView.portfolio.phone" id="phone" class="form-control">\r\n                            </div>\r\n                            <div class="form-group col-xs-12">\r\n                                <label for="email">E-Mail</label>\r\n                                <input type="email" name="email" id="email" ng-model="portfolioView.portfolio.email" class="form-control">\r\n                            </div>\r\n                        </div>\r\n                    </div>\r\n\r\n                    <div class="row">\r\n                        <div class="col-md-12">\r\n                            <div class="row">\r\n                                <div class="col-md-12 text-center">\r\n                                    <h2>Projects</h2>\r\n                                    <hr class="star-primary">\r\n                                </div>\r\n                            </div>\r\n                            <div class="row" ng-repeat="project in portfolioView.portfolio.projects">\r\n                                <div class="col-md-12">\r\n                                    <div class="callout" class="callout" ng-class-even="\'callout-right\'" ng-class-odd="\'callout-left\'">\r\n                                        <h4>{{project.title}}</h4>\r\n                                        <p>{{project.description}}</p>\r\n                                    </div>\r\n                                </div>\r\n                            </div>\r\n                            <div class="row margin-top">\r\n                                <div class="col-md-12 text-center" ng-show="!portfolioView.portfolio.newproject">\r\n                                    <div class="form-group">\r\n                                        <button class="btn btn-primary  btn-lg" type="button" ng-click="portfolioView.newproject = {}">Add Project</button>\r\n                                    </div>\r\n                                </div>\r\n                                <div class="col-md-12" ng-show="portfolioView.newproject">\r\n                                    <div class="row">\r\n                                        <div class="form group col-xs-12">\r\n                                            <label for="projectTitle">Title</label>\r\n                                            <input type="text" name="projectTitle" ng-model="portfolioView.newproject.title" id="projectTitle" class="form-control">\r\n                                        </div>\r\n                                    </div>\r\n                                    <div class="row">\r\n                                        <div class="form group col-xs-12">\r\n                                            <label for="projectDescription">Description</label>\r\n                                            <textarea class="form-control" ng-model="portfolioView.newproject.description" id="projectDescription"></textarea>\r\n                                        </div>\r\n                                    </div>\r\n                                    <div class="row margin-top">\r\n                                        <div class="form-group col-md-12 text-center">\r\n                                            <button class="btn btn-primary btn-lg" type="button" ng-click="portfolioView.portfolio.projects.push(portfolioView.newproject); portfolioView.newproject = null">Save</button>\r\n                                            <button class="btn btn-default btn-lg" type="button" ng-click="portfolioView.newproject = null">Cancel</button>\r\n                                        </div>\r\n                                    </div>\r\n                                </div>\r\n                            </div>\r\n                        </div>\r\n                    </div>\r\n            </div>\r\n            <div class="row">\r\n                <div class="col-md-12">\r\n                    <div class="col-md-12 text-center">\r\n                        <h2>Social</h2>\r\n                        <hr class="star-primary">\r\n                    </div>\r\n                    <div class="form group col-xs-12">\r\n                        <label for="facebook">Facebook</label>\r\n                        <input type="text" name="facebook" ng-model="portfolioView.portfolio.facebook" id="facebook" class="form-control">\r\n                    </div>\r\n                    <div class="form-group col-xs-12">\r\n                        <label for="twitter">Twitter</label>\r\n                        <input type="text" name="twitter" id="twitter" ng-model="portfolioView.portfolio.twitter" class="form-control">\r\n                    </div>\r\n                    <div class="form-group col-xs-12">\r\n                        <label for="xing">Xing</label>\r\n                        <input type="text" name="xing" id="xing" ng-model="portfolioView.portfolio.xing" class="form-control">\r\n                    </div>\r\n                </div>\r\n            </div>\r\n            <div class="row">\r\n                <div class="col-md-12">\r\n                    <div class="form-group col-xs-12">\r\n                        <button class="btn btn-primary  btn-lg" ng-click="portfolioView.save()" type="submit">Save</button>\r\n                    </div>\r\n                </div>\r\n            </div>\r\n\r\n            </form>\r\n        </div>\r\n    </div>\r\n    </div>\r\n\r\n\r\n</section>\r\n');
 }]);
 
 },{}],20:[function(require,module,exports){
@@ -50419,6 +50420,10 @@ var _portfolio3 = require('./portfolio.controller');
 
 var _portfolio4 = _interopRequireDefault(_portfolio3);
 
+var _ngThumb = require('./ngThumb.directive');
+
+var _ngThumb2 = _interopRequireDefault(_ngThumb);
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 var portfolioModule = _angular2.default.module('app.portfolio', []);
@@ -50427,9 +50432,95 @@ portfolioModule.config(_portfolio2.default);
 
 portfolioModule.controller('portfolioCtrl', _portfolio4.default);
 
+portfolioModule.directive('ngThumb', _ngThumb2.default);
+
 exports.default = portfolioModule;
 
-},{"./portfolio.config":26,"./portfolio.controller":27,"angular":12}],26:[function(require,module,exports){
+},{"./ngThumb.directive":26,"./portfolio.config":27,"./portfolio.controller":28,"angular":12}],26:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var NgThumbController = function NgThumbController($window) {
+    _classCallCheck(this, NgThumbController);
+
+    this.$window = $window;
+};
+
+NgThumbController.$inject = ['$window'];
+
+var NgThumbDirective = function () {
+    function NgThumbDirective() {
+        _classCallCheck(this, NgThumbDirective);
+
+        this.restrict = 'A';
+        this.template = '<p align="center"><canvas class="roundBorder" /></p>';
+        this.controller = NgThumbController;
+    }
+
+    _createClass(NgThumbDirective, [{
+        key: 'link',
+        value: function link(scope, element, attr, ctr) {
+
+            var helper = {
+                support: !!(ctr.$window.FileReader && ctr.$window.CanvasRenderingContext2D),
+                isFile: function isFile(item) {
+                    return angular.isObject(item) && item instanceof ctr.$window.File;
+                },
+                isImage: function isImage(file) {
+                    var type = '|' + file.type.slice(file.type.lastIndexOf('/') + 1) + '|';
+                    return '|jpg|png|jpeg|bmp|gif|'.indexOf(type) !== -1;
+                }
+            };
+
+            if (!helper.support) return;
+
+            var params = scope.$eval(attr.ngThumb);
+
+            if (!helper.isFile(params.file)) return;
+            if (!helper.isImage(params.file)) return;
+
+            var canvas = element.find('canvas');
+            var reader = new FileReader();
+
+            reader.onload = onLoadFile;
+            reader.readAsDataURL(params.file);
+
+            function onLoadFile(event) {
+                var img = new Image();
+                img.onload = onLoadImage;
+                img.src = event.target.result;
+            }
+
+            function onLoadImage() {
+                var width = params.width || this.width / this.height * params.height;
+                var height = params.height || this.height / this.width * params.width;
+                canvas.attr({
+                    width: width,
+                    height: height
+                });
+                canvas[0].getContext('2d').drawImage(this, 0, 0, width, height);
+            }
+        }
+    }], [{
+        key: 'directiveFactory',
+        value: function directiveFactory() {
+            return new NgThumbDirective();
+        }
+    }]);
+
+    return NgThumbDirective;
+}();
+
+exports.default = NgThumbDirective.directiveFactory;
+
+},{}],27:[function(require,module,exports){
 'use strict';
 
 portfolioConfig.$inject = ["$stateProvider"];
@@ -50451,7 +50542,7 @@ function portfolioConfig($stateProvider) {
 
 exports.default = portfolioConfig;
 
-},{}],27:[function(require,module,exports){
+},{}],28:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -50467,6 +50558,8 @@ var portfolioCtrl = function () {
     function portfolioCtrl(AppConstants, PortfolioService, $log, store, FileUploader, $window) {
         'ngInject';
 
+        var _this = this;
+
         _classCallCheck(this, portfolioCtrl);
 
         this._PortfolioService = PortfolioService;
@@ -50476,23 +50569,12 @@ var portfolioCtrl = function () {
         this._FileUploader = new FileUploader({
             url: 'http://localhost:3000/api/upload'
         });
+        this._FileUploader.onAfterAddingFile = function (fileItem) {
+            _this.previewFile = fileItem;
+            console.info('onAfterAddingFile', _this._FileUploader);
+        };
         this._FileUploader.onWhenAddingFileFailed = function (item /*{File|FileLikeObject}*/, filter, options) {
             console.info('onWhenAddingFileFailed', item, filter, options);
-        };
-        this._FileUploader.onAfterAddingFile = function (fileItem) {
-            console.info('onAfterAddingFile', fileItem);
-        };
-        this._FileUploader.onAfterAddingAll = function (addedFileItems) {
-            console.info('onAfterAddingAll', addedFileItems);
-        };
-        this._FileUploader.onBeforeUploadItem = function (item) {
-            console.info('onBeforeUploadItem', item);
-        };
-        this._FileUploader.onProgressItem = function (fileItem, progress) {
-            console.info('onProgressItem', fileItem, progress);
-        };
-        this._FileUploader.onProgressAll = function (progress) {
-            console.info('onProgressAll', progress);
         };
         this._FileUploader.onSuccessItem = function (fileItem, response, status, headers) {
             console.info('onSuccessItem', fileItem, response, status, headers);
@@ -50504,31 +50586,32 @@ var portfolioCtrl = function () {
             console.info('onCancelItem', fileItem, response, status, headers);
         };
         this._FileUploader.onCompleteItem = function (fileItem, response, status, headers) {
+            debugger;
             console.info('onCompleteItem', fileItem, response, status, headers);
         };
         this._FileUploader.onCompleteAll = function () {
             console.info('onCompleteAll');
         };
         this._$window = $window;
-        //initially set the userid
         this.getByUser();
     }
 
     _createClass(portfolioCtrl, [{
         key: 'getByUser',
         value: function getByUser() {
-            var _this = this;
+            var _this2 = this;
 
             this._PortfolioService.getByUser(this.profile.user_id).success(function (response) {
                 if (response) {
-                    _this.portfolio = response;
+                    _this2.portfolio = response;
                 } else {
-                    _this.portfolio = {};
-                    _this.portfolio.projects = [];
-                    _this.portfolio.userid = _this.profile.user_id;
+                    _this2.portfolio = {};
+                    _this2.portfolio.projects = [];
+                    _this2.portfolio.picture = _this2.profile.picture ? _this2.profile.picture : "img/profile.png";
+                    _this2.portfolio.userid = _this2.profile.user_id;
                 }
             }).error(function (err) {
-                _this._$log.error(err);
+                _this2._$log.error(err);
             });
         }
     }, {
@@ -50539,14 +50622,20 @@ var portfolioCtrl = function () {
     }, {
         key: 'save',
         value: function save() {
-            var _this2 = this;
+            this._FileUploader.onCompleteItem = function (fileItem, response, status, headers) {
+                var _this3 = this;
 
-            this._PortfolioService.add(this.portfolio).success(function (response) {
-                console.log(response);
-                _this2.portfolio = response;
-            }).error(function (err) {
-                _this2._$log.error(err);
-            });
+                this.portfolio.picture = this._AppConstants.pictureUrl + response;
+                this._PortfolioService.add(this.portfolio).success(function (response) {
+                    console.log(response);
+                    _this3.portfolio = response;
+                }).error(function (err) {
+                    _this3._$log.error(err);
+                });
+                console.info('onCompleteItem', fileItem, response, status, headers);
+            };
+
+            this._FileUploader.uploadAll();
         }
     }]);
 
@@ -50555,7 +50644,7 @@ var portfolioCtrl = function () {
 
 exports.default = portfolioCtrl;
 
-},{}],28:[function(require,module,exports){
+},{}],29:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -50620,7 +50709,7 @@ var AuthService = function () {
 
 exports.default = AuthService;
 
-},{}],29:[function(require,module,exports){
+},{}],30:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -50647,7 +50736,7 @@ servicesModule.service('PortfolioService', _portfolio2.default);
 
 exports.default = servicesModule;
 
-},{"./auth.service":28,"./portfolio.service":30,"angular":12}],30:[function(require,module,exports){
+},{"./auth.service":29,"./portfolio.service":31,"angular":12}],31:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
