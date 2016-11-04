@@ -3,11 +3,10 @@
     <div class="container">
         <div class="row">
             <div class="col-lg-12">
-                <img class="img-responsive roundBorder" ng-src="{{home.portfolio.picture}}" alt="">
                 <div class="intro-text">
-                    <span class="name">{{home.portfolio.firstname + " " + home.portfolio.lastname}}</span>
+                    <span class="name">Welcome to PORTFOLORIAN</span>
                     <hr class="star-light">
-                    <span class="skills" {{home.portfolio.motto}}</span>
+                    <span class="skills">Easily show everyone how great you are</span>
                 </div>
             </div>
         </div>
@@ -19,95 +18,24 @@
     <div class="container">
         <div class="row">
             <div class="col-md-12 text-center">
-                <h2>Projects</h2>
-                <hr class="star-primary">
-            </div>
-        </div>
-        <div class="row" ng-repeat="project in home.portfolio.projects">
-            <div class="col-md-12">
-                <div class="callout" class="callout" ng-class-even="'callout-right'" ng-class-odd="'callout-left'">
-                    <h4>{{project.title}}</h4>
-                    <p>{{project.description}}</p>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- About Section -->
-<section class="success" id="about">
-    <div class="container">
-        <div class="row">
-            <div class="col-lg-12 text-center">
                 <h2>About</h2>
-                <hr class="star-light">
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-lg-8 col-lg-offset-2 text-center">
-                {{home.portfolio.about}}
-            </div>
-
-        </div>
-    </div>
-</section>
-
-<!-- Contact Section -->
-<section id="contact">
-    <div class="container">
-        <div class="row">
-            <div class="col-lg-12 text-center">
-                <h2>Contact Me</h2>
                 <hr class="star-primary">
             </div>
         </div>
-        <div class="row">
-            <div class="col-lg-8 col-lg-offset-2">
-                <form name="sentMessage" id="contactForm" novalidate>
-                    <div class="row control-group">
-                        <div class="form-group col-xs-12  controls">
-                            <label>Name</label>
-                            <p class="form-control-static">{{home.portfolio.firstname + " " + home.portfolio.lastname}}</p>
-                        </div>
-                    </div>
-                    <div class="row control-group">
-                        <div class="form-group col-xs-12  controls">
-                            <label>Email Address</label>
-                            <p class="form-control-static">{{home.portfolio.email}}</p>
-                        </div>
-                    </div>
-                    <div class="row control-group">
-                        <div class="form-group col-xs-12 ">
-                            <label>Phone Number</label>
-                            <p class="form-control-static">{{home.portfolio.phone}}</p>
-                        </div>
-                    </div>
-                </form>
+        <div class="row" >
+            <div class="col-md-12 text-center">
+               <p>Portfolorian is a free service where you can create and share your Portfolio. </p>
+
             </div>
         </div>
     </div>
 </section>
-
 <!-- Footer -->
 <footer class="text-center">
     <div class="footer-above">
         <div class="container">
             <div class="row">
-                <div class="footer-col col-md-6">
-                    <h3>Where you find me</h3>
-                    <ul class="list-inline">
-                        <li ng-if="home.portfolio.facebook">
-                            <a ng-href="home.portfolio.facebook" class="btn-social btn-outline"><i class="fa fa-fw fa-facebook"></i></a>
-                        </li>
-                        <li ng-if="home.portfolio.twitter">
-                            <a ng-href="home.portfolio.twitter" class="btn-social btn-outline"><i class="fa fa-fw fa-twitter"></i></a>
-                        </li>
-                        <li ng-if="home.portfolio.xing">
-                            <a ng-href="home.portfolio.xing" class="btn-social btn-outline"><i class="fa fa-fw fa-xing"></i></a>
-                        </li>
-                    </ul>
-                </div>
-                <div class="footer-col col-md-6">
+                <div class="footer-col col-md-6 col-md-offset-3">
                     <h3>About Portfolorian</h3>
                     <p>Portfolorian is a free service for creating your own small portfolio to show others how great you are <a href="todo">Log in</a> now to create your own </p>
                 </div>
@@ -118,7 +46,7 @@
         <div class="container">
             <div class="row">
                 <div class="col-lg-12">
-                    Copyright &copy; Your Website 2016
+                    Copyright &copy; Portfolorian 2016
                 </div>
             </div>
         </div>

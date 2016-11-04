@@ -52,8 +52,7 @@ router.get('/findbyUser/:userid', function(req, res) {
 
 
 router.post('/', authCheck, function(req, res, next) {
-    var portfolio = new Portfolio(req.body);
-    if (portfolio._id) {
+    if (req.body._id) {
         Portfolio.findOneAndUpdate({
                 _id: portfolio._id
             },
@@ -68,6 +67,7 @@ router.post('/', authCheck, function(req, res, next) {
                 res.json(portfolio);
             })
     } else {
+        var portfolio = new Portfolio(req.body);
         portfolio.save(function(err, portfolio) {
             if (err) {
                 return next(err);

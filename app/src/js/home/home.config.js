@@ -3,12 +3,10 @@ function HomeConfig($stateProvider){
 
   $stateProvider
   .state('app.home',{
-    url:'/:portfolioid',
-    controller:'HomeCtrl',
-    controllerAs:'home',
+    url:'/',
     templateUrl:'home/home.html',
-    title:'Home'
+    title: 'Home'
   })
-};
+}
 
 export default HomeConfig;

@@ -17,6 +17,7 @@ import './home';
 import './services';
 import './config/app.templates';
 import './portfolio';
+import './view';
 
 
 import 'bootstrap/dist/js/bootstrap.js';
@@ -34,10 +35,9 @@ const requires = [
     'templates',
     'app.layout',
     'app.home',
+    'app.view',
     'app.services',
     'app.portfolio',
-
-    //'app.admin.portfolio'
 ]
 
 

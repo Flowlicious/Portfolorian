@@ -16,6 +16,7 @@ class portfolioCtrl {
     }
 
     getByUser() {
+
         this._PortfolioService.getByUser(this.profile.user_id).success((response) => {
             if (response) {
                 this.portfolio = response;
@@ -35,6 +36,7 @@ class portfolioCtrl {
     }
 
     save() {
+      debugger;
         if (this.previewFile) {
             this._FileUploader.onCompleteItem = (fileItem, response, status, headers) => {
                 this.portfolio.picture = this._AppConstants.pictureUrl + response;

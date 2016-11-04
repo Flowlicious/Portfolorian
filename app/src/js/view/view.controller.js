@@ -1,4 +1,4 @@
-class HomeCtrl {
+class ViewCtrl {
     constructor($log, $stateParams, PortfolioService) {
         'ngInject';
 
@@ -17,4 +17,5 @@ class HomeCtrl {
     }
   }
 
-export default HomeCtrl;
+export default ViewCtrl
+;
