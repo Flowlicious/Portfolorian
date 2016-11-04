@@ -12,7 +12,8 @@ var portfolioSchema = new mongoose.Schema({
   phone:String,
   homepage:String,
   projects:[],
-  userid:String
+  userid:String,
+  picture: String
 })
 
 mongoose.model('Portfolio',portfolioSchema);
